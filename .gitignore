@@ -135,3 +135,19 @@ fabric.properties
 *.exe
 *.out
 *.app
+
+
+#######################################
+#
+#   Project ignores
+#
+
+# log dir
+log/
+
+# executable dir
+bin/
+
+# object files dir
+obj/
+

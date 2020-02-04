@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/KIV-ZOS_sp.iml" filepath="$PROJECT_DIR$/.idea/KIV-ZOS_sp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/KIV-ZOS.iml" filepath="$PROJECT_DIR$/.idea/KIV-ZOS.iml" />
     </modules>
   </component>
 </project>
