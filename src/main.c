@@ -80,9 +80,6 @@ int main(int argc, char const **argv) {
         set_myerrno(Fsname_missing);
     }
 
-    my_strerror(2);
-    my_strerror(0);
-
     // if name is ok, load and run
     if (!is_error()) {
         printf(PR_INTRO);
