@@ -8,14 +8,12 @@
                  "| Created by matenestor for class KIV/ZOS.    |\n" \
                  "|_____________________________________________|\n\n"
 
-#define PR_HELP "Usage: inodes <filesystem-name>\n\n"
-
-// also defined in simulator.h (note: length mentioned in doc comment of parse_fsname()
-#define LENGTH_FSNAME_STRING 32
+#define PR_HELP  "Usage: inodes <filesystem-name>\n\n"
 
 #define isunscr(c) ((c)==('_'))
+#define isdot(c)   ((c)==('.'))
 
-extern void load(const char*, size_t);
+extern void load(const char*);
 extern void run();
 
 

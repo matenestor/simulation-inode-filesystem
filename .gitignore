@@ -145,9 +145,8 @@ fabric.properties
 # log dir
 log/
 
-# executable dir
-bin/
-
 # object files dir
 obj/
 
+# filesystems dir
+fs/

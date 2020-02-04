@@ -15,8 +15,9 @@ DIR_SRC = src/
 DIR_INC = $(DIR_SRC)inc/
 # object directory
 DIR_OBJ = obj/
-# output directory
-DIR_BIN = bin/
+
+# filesystems directory
+DIR_FS = fs/
 
 # include location of dependent header files
 IDEPS = -I$(DIR_INC)
@@ -34,7 +35,7 @@ RM = rm -rf
 all: mkdirs $(BIN)
 
 $(BIN): $(OBJ)
-	$(CC) $(CFLAGS) -o $(DIR_BIN)$@ $^
+	$(CC) $(CFLAGS) -o $@ $^
 
 $(DIR_OBJ)%.o: $(DIR_SRC)% $(HDR)
 	$(CC) $(CFLAGS) $(IDEPS) -c $< -o $@
@@ -44,8 +45,8 @@ $(DIR_OBJ)%.o: $(DIR_SRC)% $(HDR)
 
 mkdirs:
 	mkdir -p $(DIR_LOG)
-	mkdir -p $(DIR_BIN)
 	mkdir -p $(DIR_OBJ)
+	mkdir -p $(DIR_FS)
 
 .PHONY: mkdirs
 

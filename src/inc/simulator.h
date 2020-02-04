@@ -1,14 +1,14 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
+#include "fspath_info.h"
 
-// also defined in main.h
-#define LENGTH_FSNAME_STRING 32
-#define LENGTH_PWD_STRING    1024
-#define LENGTH_PROMPT_STRING (LENGTH_FSNAME_STRING+LENGTH_PWD_STRING+1)
 
-#define FORMAT_PROMPT "%s:%s> "
+#define STRLEN_PWD    1024
+#define STRLEN_PROMPT (STRLEN_FSNAME+STRLEN_PWD)
+
 #define SEPARATOR     "/"
+#define FORMAT_PROMPT "%s:%s> "
 
 #define PR_USAGE "Available commands:\n" \
                  "  cp      SOURCE DEST       Copy SOURCE to DEST.\n" \
@@ -32,12 +32,13 @@
                  "  help                      Print this help.\n\n"
 
 /** Filesystem name given by user. */
-static char fsname[LENGTH_FSNAME_STRING];
+static char fsname[STRLEN_FSNAME];
+/** Filesystem path. */
+static char fspath[STRLEN_FSPATH];
 
 /** Current working directory cache. */
-static char pwd[LENGTH_PWD_STRING];
-
+static char pwd[STRLEN_PWD];
 /** Whole prompt in console. */
-static char prompt[LENGTH_PROMPT_STRING];
+static char prompt[STRLEN_PROMPT];
 
 #endif

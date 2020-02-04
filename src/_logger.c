@@ -12,7 +12,7 @@ int logger_init() {
     log_file = fopen(LOG_FNAME, "w");
 
     if (log_file == NULL) {
-        printf("[WARNING] Log file could not be opened. Log messages will not be writen.");
+        printf("[WARNING] Log file could not be opened. Log messages will not be writen.\n");
         status = RETURN_FAILURE;
     }
     else {

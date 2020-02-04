@@ -13,7 +13,7 @@
 #define DATETIME_LENGTH 21
 
 /** Log file name. */
-#define LOG_FNAME   "../log/inode.log"
+#define LOG_FNAME   "log/inode.log"
 
 // severity message constants
 #define LOG_FATAL   "[FATAL]   "

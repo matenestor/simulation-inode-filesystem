@@ -8,6 +8,7 @@ add_executable(KIV_ZOS_sp
         src/error.c src/inc/error.h
 
         src/main.c src/inc/main.h
+        src/inc/fspath_info.h
         src/inc/return_codes.h
 
         src/simulator.c src/inc/simulator.h
