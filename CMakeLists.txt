@@ -13,4 +13,4 @@ add_executable(KIV_ZOS_sp
 
         src/simulator.c src/inc/simulator.h
         src/inc/inode.h
-        )
+        src/commands.c src/inc/commands.h)

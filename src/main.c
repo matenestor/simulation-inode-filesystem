@@ -13,8 +13,9 @@
 
 void signal_handler(int signum) {
     set_myerrno(Signal_interrupt);
-    exit_error();
+    my_exit();
 }
+
 
 /******************************************************************************
  *
@@ -27,7 +28,7 @@ void signal_handler(int signum) {
  */
 int parse_fsname(char* fsname, const char* arg_name) {
     // return value
-    int rv = RETURN_SUCCESS;
+    int ret = RETURN_SUCCESS;
 
     // length of provided name
     size_t len = strlen(arg_name);
@@ -37,9 +38,9 @@ int parse_fsname(char* fsname, const char* arg_name) {
         for (i = 0; i < len; ++i) {
             // not valid if char is not letter, number or underscore
             if (!(isalnum(arg_name[i]) || isunscr(arg_name[i]) || isdot(arg_name[i]))) {
-                fprintf(stderr, "Use only letters, numbers, dots and/or underscores!\n");
+                fputs("Use only letters, numbers, dots and/or underscores!\n", stderr);
                 set_myerrno(Fsname_invalid);
-                rv = RETURN_FAILURE;
+                ret = RETURN_FAILURE;
             }
         }
 
@@ -47,13 +48,14 @@ int parse_fsname(char* fsname, const char* arg_name) {
         strncpy(fsname, arg_name, len);
     }
     else {
-        fprintf(stderr, "Maximal length on name is 31 characters!\n");
+        fputs("Maximal length on name is 31 characters!\n", stderr);
         set_myerrno(Fsname_long);
-        rv = RETURN_FAILURE;
+        ret = RETURN_FAILURE;
     }
 
-    return rv;
+    return ret;
 }
+
 
 int main(int argc, char const **argv) {
     // name of filesystem given by user
@@ -64,7 +66,7 @@ int main(int argc, char const **argv) {
 
     // init logger and set level
     if (logger_init() == RETURN_SUCCESS) {
-        logger_set_level(Debug);
+        logger_set_level(Log_Debug);
     }
 
     // register signal interrupt
@@ -81,14 +83,21 @@ int main(int argc, char const **argv) {
 
     // if name is ok, load and run
     if (!is_error()) {
-        printf(PR_INTRO);
-        load(fsname);
-        run();
+        puts(PR_INTRO);
+
+        // run, if filesystem was loaded successfully, when exists,
+        // or user was notified about possible formatting, when doesn't exists
+        if (load(fsname) == RETURN_SUCCESS) {
+            run();
+        }
+        else {
+            my_exit();
+        }
     }
     // if error occurred during parsing process, exit with error
     else {
-        printf(PR_HELP);
-        exit_error();
+        puts(PR_HELP);
+        my_exit();
     }
 
     // destroy logger

@@ -16,19 +16,19 @@
 #define LOG_FNAME   "log/inode.log"
 
 // severity message constants
-#define LOG_FATAL   "[FATAL]   "
-#define LOG_ERROR   "[ERROR]   "
-#define LOG_WARNING "[WARNING] "
-#define LOG_INFO    "[INFO]    "
-#define LOG_DEBUG   "[DEBUG]   "
-#define LOG_TRACE   "[TRACE]   "
+#define LOG_FATAL   "[FATAL]  "
+#define LOG_ERROR   "[ERROR]  "
+#define LOG_WARNING "[WARNING]"
+#define LOG_INFO    "[INFO]   "
+#define LOG_DEBUG   "[DEBUG]  "
+#define LOG_TRACE   "[TRACE]  "
 
 
 /** Buffering messages for logging. */
 static char buff[BUFF_SIZE];
 
 /** Level of logger severity. */
-static level log_level;
+static enum level log_level;
 
 /** File for logging to. */
 static FILE* log_file;

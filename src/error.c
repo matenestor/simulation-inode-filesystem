@@ -10,11 +10,13 @@ void reset_myerrno() {
     my_errno = No_error;
 }
 
-void set_myerrno(const error err) {
+
+void set_myerrno(const enum error err) {
     my_errno = err;
 }
 
-char* my_strerror(const error err) {
+
+char* my_strerror(const enum error err) {
     static char err_str[LENGTH_ERROR_STRING];
 
     switch (err) {
@@ -38,6 +40,14 @@ char* my_strerror(const error err) {
             strcpy(err_str, "Filesystem name invalid.");
             break;
 
+        case Fs_not_loaded:
+            strcpy(err_str, "Unable to load filesystem.");
+            break;
+
+        case Fs_not_formatted:
+            strcpy(err_str, "Unable to format filesystem.");
+            break;
+
         default:
             strcpy(err_str, "");
     }
@@ -45,18 +55,24 @@ char* my_strerror(const error err) {
     return err_str;
 }
 
-void exit_error() {
-    char* p_err_str = my_strerror(my_errno);
 
+void my_perror() {
+    fputs(my_strerror(my_errno), stderr);
+    fputc('\n', stderr);
+}
+
+
+void my_exit() {
     // print error to console and log file
-    fprintf(stderr, "%s", p_err_str);
-    log_fatal("Exiting with error type: %s", p_err_str);
+    my_perror();
+    log_fatal("Exiting with error type: %s", my_strerror(my_errno));
 
     // destroy logger
     logger_destroy();
 
     exit(EXIT_FAILURE);
 }
+
 
 bool is_error() {
     return my_errno != No_error;

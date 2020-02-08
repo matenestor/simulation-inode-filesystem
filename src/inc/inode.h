@@ -6,7 +6,7 @@
 
 
 /** 7 chars (name) + dot + 3 chars (extension) + \0 = 12 chars in total for item name */
-#define LENGTH_ITEM_STRING 12
+#define STRLEN_ITEM_NAME 12
 
 /** Empty item constant. TODO needed? */
 const int32_t ID_ITEM_FREE = 0;
@@ -47,7 +47,7 @@ struct inode {
 
 
 struct directory_item {
-    char item_name[LENGTH_ITEM_STRING];
+    char item_name[STRLEN_ITEM_NAME];
     int32_t fk_id_node;                   // i-node of file
 };
 

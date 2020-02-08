@@ -12,11 +12,11 @@ int logger_init() {
     log_file = fopen(LOG_FNAME, "w");
 
     if (log_file == NULL) {
-        printf("[WARNING] Log file could not be opened. Log messages will not be writen.\n");
+        fputs("Log file could not be opened. Log messages will not be writen.\n", stderr);
         status = RETURN_FAILURE;
     }
     else {
-        logger_set_level(Info);
+        logger_set_level(Log_Info);
         log_info("Logger initialized.");
     }
 
@@ -33,7 +33,7 @@ void logger_destroy() {
 }
 
 
-void logger_set_level(level lvl) {
+void logger_set_level(enum level lvl) {
     log_level = lvl;
 }
 
@@ -47,7 +47,7 @@ void get_datetime(char* datetime) {
     tm_info = localtime(&t);
 
     // year-month-day_hours-minutes-seconds
-    strftime(datetime, DATETIME_LENGTH, "[%d.%m.%y %H:%M:%S] ", tm_info);
+    strftime(datetime, DATETIME_LENGTH, "[%d.%m.%y %H:%M:%S]", tm_info);
 }
 
 
@@ -55,12 +55,8 @@ void log_msg(const char* severity, const char* msg) {
     static char datetime[DATETIME_LENGTH];
     get_datetime(datetime);
 
-    // no need to create another buffer and use snprintf,
-    // put it directly to file stream, instead of ram and then file stream
-    fputs(severity, log_file);
-    fputs(datetime, log_file);
-    fputs(msg, log_file);
-    fputc('\n', log_file);
+    // print log message to log file
+    fprintf(log_file, "%s %s %s\n", severity, datetime, msg);
     fflush(log_file);
 }
 
@@ -69,7 +65,7 @@ void log_msg(const char* severity, const char* msg) {
 
 
 void log_fatal(const char* msg, ...) {
-    if (log_level >= Fatal && log_file != NULL) {
+    if (log_level >= Log_Fatal && log_file != NULL) {
         // format msg in case of arguments
         va_list args;
         va_start(args, msg);
@@ -81,8 +77,9 @@ void log_fatal(const char* msg, ...) {
     }
 }
 
+
 void log_error(const char* msg, ...) {
-    if (log_level >= Error && log_file != NULL) {
+    if (log_level >= Log_Error && log_file != NULL) {
         // format msg in case of arguments
         va_list args;
         va_start(args, msg);
@@ -94,8 +91,9 @@ void log_error(const char* msg, ...) {
     }
 }
 
+
 void log_warning(const char* msg, ...) {
-    if (log_level >= Warning && log_file != NULL) {
+    if (log_level >= Log_Warning && log_file != NULL) {
         // format msg in case of arguments
         va_list args;
         va_start(args, msg);
@@ -107,8 +105,9 @@ void log_warning(const char* msg, ...) {
     }
 }
 
+
 void log_info(const char* msg, ...) {
-    if (log_level >= Info && log_file != NULL) {
+    if (log_level >= Log_Info && log_file != NULL) {
         // format msg in case of arguments
         va_list args;
         va_start(args, msg);
@@ -120,8 +119,9 @@ void log_info(const char* msg, ...) {
     }
 }
 
+
 void log_debug(const char* msg, ...) {
-    if (log_level >= Debug && log_file != NULL) {
+    if (log_level >= Log_Debug && log_file != NULL) {
         // format msg in case of arguments
         va_list args;
         va_start(args, msg);
@@ -133,8 +133,9 @@ void log_debug(const char* msg, ...) {
     }
 }
 
+
 void log_trace(const char* msg, ...) {
-    if (log_level == Trace && log_file != NULL) {
+    if (log_level == Log_Trace && log_file != NULL) {
         // format msg in case of arguments
         va_list args;
         va_start(args, msg);

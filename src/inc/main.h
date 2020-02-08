@@ -6,14 +6,14 @@
                  "|                                             |\n" \
                  "| Welcome to simulator of i-nodes filesystem. |\n" \
                  "| Created by matenestor for class KIV/ZOS.    |\n" \
-                 "|_____________________________________________|\n\n"
+                 "|_____________________________________________|\n"
 
-#define PR_HELP  "Usage: inodes <filesystem-name>\n\n"
+#define PR_HELP  "Usage: inodes <filesystem-name>\n"
 
 #define isunscr(c) ((c)==('_'))
 #define isdot(c)   ((c)==('.'))
 
-extern void load(const char*);
+extern int load(const char*);
 extern void run();
 
 
