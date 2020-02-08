@@ -12,6 +12,15 @@ void clear_buffer(char* buff, const size_t size) {
     memset(buff, '\0', size);
 }
 
+
+void close_filesystem() {
+    if (filesystem != NULL) {
+        fclose(filesystem);
+        log_info("Filesystem [%s] closed.", fsname);
+    }
+}
+
+
 int load(const char* fsn) {
     int ret = RETURN_SUCCESS;
 
@@ -159,10 +168,10 @@ void run() {
             }
 
             else if (strcmp(command, CMD_FORMAT) == 0) {
-                if (format_(arg1, filesystem, fspath) == RETURN_FAILURE) {
-                    my_perror();
+                if (format_(arg1, &filesystem, fspath) == RETURN_FAILURE) {
+                    my_perror("format");
                     reset_myerrno();
-                    perror("sys error");
+                    log_error("Filesystem could not be formatted.");
                 }
             }
 
@@ -179,10 +188,7 @@ void run() {
             }
 
             else if (strcmp(command, CMD_EXIT) == 0) {
-                if (filesystem != NULL) {
-                    fclose(filesystem);
-                }
-
+                close_filesystem();
                 is_running = false;
             }
 
@@ -193,7 +199,7 @@ void run() {
         }
 
         // input buffer is small, so just clear it all
-        clear_buffer(command, BUFFIN_LENGTH);
+        clear_buffer(command, STRLEN_LONGEST_CMD);
         // buffers for arguments are cleared only as much as necessary (a bit of optimization)
         clear_buffer(arg1, strlen(arg1));
         clear_buffer(arg2, strlen(arg2));

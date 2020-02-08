@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
 
 #include "inc/commands.h"
 #include "inc/error.h"
@@ -81,26 +83,6 @@ int outcp_(char* arg1, char* arg2) {
 
 int load_(char* arg1) {
     int ret = RETURN_FAILURE;
-    return ret;
-}
-
-
-int format_(const char* arg1, FILE* filesystem, const char* path) {
-    int ret = RETURN_FAILURE;
-
-    // TODO convert arg1 to int, if any
-    // TODO write structures to file
-
-    // filesystem is ready to be loaded
-    if ((filesystem = fopen(path, "rb+")) != NULL) {
-        fwrite("open", sizeof(char), 4, filesystem);
-        puts("Filesystem formatted.");
-        ret = RETURN_SUCCESS;
-    }
-    else {
-        set_myerrno(Fs_not_formatted);
-    }
-
     return ret;
 }
 

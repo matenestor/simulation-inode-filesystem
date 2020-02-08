@@ -3,7 +3,7 @@
 
 
 /** Levels of severity. */
-enum level {
+enum __level {
     Log_Off     = 0,
     Log_Fatal   = 1,
     Log_Error   = 2,
@@ -18,7 +18,7 @@ int logger_init();
 /** Destroy logger. */
 void logger_destroy();
 /** Set level of logger severity. */
-void logger_set_level(enum level);
+void logger_set_level(enum __level);
 
 // types of log messages
 void log_fatal(const char*, ...);

@@ -9,13 +9,13 @@
 #define STRLEN_ITEM_NAME 12
 
 /** Empty item constant. TODO needed? */
-const int32_t ID_ITEM_FREE = 0;
+//const int32_t ID_ITEM_FREE = 0;
 
 /** Types of items available in filesystem. */
-typedef enum {
+enum item {
     Item_file,
     Item_directory
-} item;
+};
 
 struct superblock {
     char signature[9];              // signature of author
@@ -32,7 +32,7 @@ struct superblock {
 struct inode {
     // meta
     int32_t id_node;                 // i-node id
-    item item_type;                  // type of item in filesystem
+    enum item item_type;             // type of item in filesystem
     int8_t references;               // count of references (used for hardlinks)
     int32_t file_size;               // size of file
     // links

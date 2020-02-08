@@ -42,7 +42,7 @@
                  "  fsck                      Check and repair a Linux filesystem.\n" \
                  "  tree    [DIRECTORY]       List contents of directories in a tree-like format.\n" \
                  "  help                      Print this help.\n" \
-                 "  exit                      Exit simulation.\n" \
+                 "  exit                      Exit simulation.\n\n" \
                  "  - Note, that commands will accept only exact count of arguments as written above, not more." \
                  "    Other arguments are discarded. Arguments in [] brackets are optional.\n"
 
@@ -93,8 +93,9 @@ extern int info_(char*);
 extern int incp_(char*, char*);
 extern int outcp_(char*, char*);
 extern int load_(char*);
-extern int format_(char*, FILE*, char*);
+extern int format_(char*, FILE**, char*);
 extern int fsck_();
 extern int tree_(char*);
+
 
 #endif

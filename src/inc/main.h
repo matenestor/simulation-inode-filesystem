@@ -15,6 +15,7 @@
 
 extern int load(const char*);
 extern void run();
+extern void close_filesystem();
 
 
 #endif

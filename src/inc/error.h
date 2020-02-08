@@ -3,9 +3,9 @@
 
 #include <stdbool.h>
 
-#define LENGTH_ERROR_STRING 64
+#define __LENGTH_ERROR_STRING 64
 
-enum error {
+enum __error {
     No_error,
     Signal_interrupt,
     Fsname_missing,
@@ -13,13 +13,18 @@ enum error {
     Fsname_invalid,
     Fs_not_loaded,
     Fs_not_formatted,
+    Fs_size_sim_range,
+    Fs_size_sys_range,
+    Fs_size_nan,
+    Fs_size_negative,
+    Fs_size_none,
 };
 
-enum error my_errno;
+enum __error my_errno;
 
 void reset_myerrno();
-void set_myerrno(enum error);
-char* my_strerror(enum error);
+void set_myerrno(enum __error);
+char* my_strerror(enum __error);
 void my_perror();
 void my_exit();
 bool is_error();

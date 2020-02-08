@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "inc/error.h"
 #include "inc/fspath_info.h"
@@ -12,6 +13,7 @@
 
 
 void signal_handler(int signum) {
+    close_filesystem();
     set_myerrno(Signal_interrupt);
     my_exit();
 }

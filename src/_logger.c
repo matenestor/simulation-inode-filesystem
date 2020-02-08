@@ -9,7 +9,7 @@
 int logger_init() {
     int status = RETURN_SUCCESS;
 
-    log_file = fopen(LOG_FNAME, "w");
+    log_file = fopen(__LOG_FNAME, "w");
 
     if (log_file == NULL) {
         fputs("Log file could not be opened. Log messages will not be writen.\n", stderr);
@@ -33,7 +33,7 @@ void logger_destroy() {
 }
 
 
-void logger_set_level(enum level lvl) {
+void logger_set_level(enum __level lvl) {
     log_level = lvl;
 }
 
@@ -47,12 +47,12 @@ void get_datetime(char* datetime) {
     tm_info = localtime(&t);
 
     // year-month-day_hours-minutes-seconds
-    strftime(datetime, DATETIME_LENGTH, "[%d.%m.%y %H:%M:%S]", tm_info);
+    strftime(datetime, __DATETIME_LENGTH, "[%d.%m.%y %H:%M:%S]", tm_info);
 }
 
 
 void log_msg(const char* severity, const char* msg) {
-    static char datetime[DATETIME_LENGTH];
+    static char datetime[__DATETIME_LENGTH];
     get_datetime(datetime);
 
     // print log message to log file
@@ -69,11 +69,11 @@ void log_fatal(const char* msg, ...) {
         // format msg in case of arguments
         va_list args;
         va_start(args, msg);
-        vsnprintf(buff, BUFF_SIZE, msg, args);
+        vsnprintf(buff, __BUFF_SIZE, msg, args);
         va_end(args);
 
         // log message
-        log_msg(LOG_FATAL, buff);
+        log_msg(__LOG_FATAL, buff);
     }
 }
 
@@ -83,11 +83,11 @@ void log_error(const char* msg, ...) {
         // format msg in case of arguments
         va_list args;
         va_start(args, msg);
-        vsnprintf(buff, BUFF_SIZE, msg, args);
+        vsnprintf(buff, __BUFF_SIZE, msg, args);
         va_end(args);
 
         // log message
-        log_msg(LOG_ERROR, buff);
+        log_msg(__LOG_ERROR, buff);
     }
 }
 
@@ -97,11 +97,11 @@ void log_warning(const char* msg, ...) {
         // format msg in case of arguments
         va_list args;
         va_start(args, msg);
-        vsnprintf(buff, BUFF_SIZE, msg, args);
+        vsnprintf(buff, __BUFF_SIZE, msg, args);
         va_end(args);
 
         // log message
-        log_msg(LOG_WARNING, buff);
+        log_msg(__LOG_WARNING, buff);
     }
 }
 
@@ -111,11 +111,11 @@ void log_info(const char* msg, ...) {
         // format msg in case of arguments
         va_list args;
         va_start(args, msg);
-        vsnprintf(buff, BUFF_SIZE, msg, args);
+        vsnprintf(buff, __BUFF_SIZE, msg, args);
         va_end(args);
 
         // log message
-        log_msg(LOG_INFO, buff);
+        log_msg(__LOG_INFO, buff);
     }
 }
 
@@ -125,11 +125,11 @@ void log_debug(const char* msg, ...) {
         // format msg in case of arguments
         va_list args;
         va_start(args, msg);
-        vsnprintf(buff, BUFF_SIZE, msg, args);
+        vsnprintf(buff, __BUFF_SIZE, msg, args);
         va_end(args);
 
         // log message
-        log_msg(LOG_DEBUG, buff);
+        log_msg(__LOG_DEBUG, buff);
     }
 }
 
@@ -139,10 +139,10 @@ void log_trace(const char* msg, ...) {
         // format msg in case of arguments
         va_list args;
         va_start(args, msg);
-        vsnprintf(buff, BUFF_SIZE, msg, args);
+        vsnprintf(buff, __BUFF_SIZE, msg, args);
         va_end(args);
 
         // log message
-        log_msg(LOG_TRACE, buff);
+        log_msg(__LOG_TRACE, buff);
     }
 }
