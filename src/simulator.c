@@ -106,6 +106,9 @@ void run() {
     char arg1[BUFFIN_LENGTH] = {0};
     char arg2[BUFFIN_LENGTH] = {0};
 
+    struct inode actual = {0};
+    struct inode distant = {0};
+
     bool is_running = true;
 
     while (is_running) {
@@ -168,7 +171,7 @@ void run() {
             }
 
             else if (strcmp(command, CMD_FORMAT) == 0) {
-                if (format_(arg1, &filesystem, fspath) == RETURN_FAILURE) {
+                if (format_(arg1, &filesystem, fspath, &actual) == RETURN_FAILURE) {
                     my_perror("format");
                     reset_myerrno();
                     log_error("Filesystem could not be formatted.");

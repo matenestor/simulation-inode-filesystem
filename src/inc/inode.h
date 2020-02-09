@@ -18,8 +18,8 @@ enum item {
 };
 
 struct superblock {
-    char signature[9];              // signature of author
-    char volume_descriptor[251];    // description of filesystem
+    char signature[16];             // signature of author
+    char volume_descriptor[256];    // description of filesystem
     int32_t disk_size;              // total size of filesystem
     int32_t cluster_size;           // cluster size in data part of filesystem
     int32_t cluster_count;          // cluster count in data part of filesystem
@@ -45,10 +45,10 @@ struct inode {
     int32_t indirect2;               // level 2 indirect link on data clusters (pointer-pointer-data)
 };
 
-
 struct directory_item {
     char item_name[STRLEN_ITEM_NAME];
     int32_t fk_id_node;                   // i-node of file
 };
+
 
 #endif

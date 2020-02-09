@@ -46,8 +46,7 @@ void get_datetime(char* datetime) {
     t = time(NULL);
     tm_info = localtime(&t);
 
-    // year-month-day_hours-minutes-seconds
-    strftime(datetime, __DATETIME_LENGTH, "[%d.%m.%y %H:%M:%S]", tm_info);
+    strftime(datetime, __DATETIME_LENGTH, "[%Y-%m-%d %H:%M:%S]", tm_info);
 }
 
 

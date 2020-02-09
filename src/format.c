@@ -1,5 +1,11 @@
+#include <sys/types.h>
+#include <ctype.h>
 #include <errno.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 #include "inc/error.h"
 #include "inc/format.h"
@@ -30,7 +36,7 @@ void get_datetime(char* datetime) {
     tm_info = localtime(&t);
 
     // Mon Jan 01 00:00:00 2020
-    strftime(datetime, DATETIME_LENGTH, "%c", tm_info);
+    strftime(datetime, DATETIME_LENGTH, "%Y-%m-%d %H:%M:%S", tm_info);
 }
 
 
@@ -53,7 +59,7 @@ int is_valid_size(const char* num_str, int* size) {
                     // if number is in simulator range
                     if (isinrange(num)) {
                         // set size for the format command
-                        *size = num;
+                        *size = (int) num;
                         ret = RETURN_SUCCESS;
                     }
                     else {
@@ -83,34 +89,58 @@ int is_valid_size(const char* num_str, int* size) {
 }
 
 
-int format_(const char* size_str, FILE** filesystem, const char* path) {
+int init_superblock(FILE* filesystem, const int size) {
+    char datetime[DATETIME_LENGTH] = {0};
+    get_datetime(datetime);
+
+    // size is in MB, cluster_size is in B
+    // with cluster size 1024 B, there is obvious redundancy, but what if cluster size will change..?
+    // data part is 90 % of whole filesystem
+    int clstr_cnt = (int)(mb2b(size)*0.9) / FS_CLUSTER_SIZE;
+
+    // inode bitmap is after superblock
+    int addr_bm_in = sizeof(struct superblock);
+    // data bitmap is after inode bitmap
+    int addr_bm_dat = addr_bm_in + clstr_cnt;
+    // inodes are after data bitmap
+    int addr_in = addr_bm_dat + clstr_cnt;
+    // data are at the end of filesystem -- there is unused space between inodes and data
+    int addr_dat = mb2b(size) - (clstr_cnt*FS_CLUSTER_SIZE);
+
+    // init superblock variables
+    struct superblock sb = {SIGNATURE, "", size, FS_CLUSTER_SIZE, clstr_cnt, addr_bm_in, addr_bm_dat, addr_in, addr_dat};
+    // init also volume_descriptor
+    sprintf(sb.volume_descriptor, "%s, made by matenestor", datetime);
+
+    // write superblock to file
+    fwrite(&sb, sizeof(struct superblock), 1, filesystem);
+
+    return RETURN_SUCCESS;
+}
+
+
+int format_(const char* size_str, FILE** filesystem, const char* path, struct inode* actual) {
     int ret = RETURN_FAILURE;
     int size = 0;
-    char datetime[DATETIME_LENGTH] = {0};
 
     log_info("Formatting filesystem [%s]", path);
 
     if (is_valid_size(size_str, &size) == RETURN_SUCCESS) {
-        get_datetime(datetime);
-
-        struct superblock sb = {SIGNATURE, "", 10, 1024, 10, 1, 2, 3, 4};
-        sprintf(sb.volume_descriptor, "%s, made by matenestor", datetime);
-
-        // filesystem is ready to be loaded
         if ((*filesystem = fopen(path, "wb+")) != NULL) {
-            // TODO write structures to file
-            fwrite(&sb, sizeof(struct superblock), 1, *filesystem);
-            puts("Filesystem formatted.");
+            init_superblock(*filesystem, size);
+
+            log_info("Filesystem [%s] with size [%d] formatted.", path, size);
+            printf("format: filesystem formatted, size: %d MB\n", size);
             ret = RETURN_SUCCESS;
         }
         else {
-            log_error("format: %s", strerror(errno));
+            log_error("System error while formatting: %s", strerror(errno));
             perror("format");
             errno = 0;
         }
     }
     else {
-        log_error("format: %s", my_strerror(my_errno));
+        log_error("Simulation error while formatting: %s", my_strerror(my_errno));
         my_perror("format");
         reset_myerrno();
     }

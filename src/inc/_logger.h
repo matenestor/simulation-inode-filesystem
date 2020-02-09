@@ -10,7 +10,7 @@
 #define __BUFF_SIZE 1024
 
 /** Length of datetime string + \0 */
-#define __DATETIME_LENGTH 21
+#define __DATETIME_LENGTH 22
 
 /** Log file name. */
 #define __LOG_FNAME   "log/inode.log"

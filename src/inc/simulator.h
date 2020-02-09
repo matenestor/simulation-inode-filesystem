@@ -1,7 +1,7 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
-#include "commands.h"
+#include "inode.h"
 #include "fspath_info.h"
 
 
@@ -93,7 +93,7 @@ extern int info_(char*);
 extern int incp_(char*, char*);
 extern int outcp_(char*, char*);
 extern int load_(char*);
-extern int format_(char*, FILE**, char*);
+extern int format_(char*, FILE**, char*, struct inode*);
 extern int fsck_();
 extern int tree_(char*);
 
