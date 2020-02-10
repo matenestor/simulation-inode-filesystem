@@ -68,6 +68,34 @@ char* my_strerror(const enum __error err) {
             strcpy(err_str, "filesystem size not provided");
             break;
 
+        case Arg_missing_operand:
+            strcpy(err_str, "missing operand");
+            break;
+
+        case Arg_missing_destination:
+            strcpy(err_str, "missing destination file operand");
+            break;
+
+        case Dir_not_empty:
+            strcpy(err_str, "directory not empty");
+            break;
+
+        case Dir_exists:
+            strcpy(err_str, "file exists");
+            break;
+
+        case Item_not_file:
+            strcpy(err_str, "is a directory");
+            break;
+
+        case Item_not_directory:
+            strcpy(err_str, "not a directory");
+            break;
+
+        case Item_not_exists:
+            strcpy(err_str, "no such file or directory");
+            break;
+
         default:
             strcpy(err_str, "");
     }

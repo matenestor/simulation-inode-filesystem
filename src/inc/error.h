@@ -18,6 +18,13 @@ enum __error {
     Fs_size_nan,
     Fs_size_negative,
     Fs_size_none,
+    Arg_missing_operand,
+    Arg_missing_destination,
+    Dir_not_empty,
+    Dir_exists,
+    Item_not_file,
+    Item_not_directory,
+    Item_not_exists,
 };
 
 enum __error my_errno;
@@ -25,7 +32,7 @@ enum __error my_errno;
 void reset_myerrno();
 void set_myerrno(enum __error);
 char* my_strerror(enum __error);
-void my_perror();
+void my_perror(const char*);
 void my_exit();
 bool is_error();
 

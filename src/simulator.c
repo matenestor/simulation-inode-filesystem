@@ -135,7 +135,10 @@ void run() {
             }
 
             else if (strcmp(command, CMD_MKDIR) == 0) {
-                mkdir_(arg1);
+                if (mkdir_(arg1) == RETURN_FAILURE) {
+                    my_perror("mkdir");
+                    reset_myerrno();
+                }
             }
 
             else if (strcmp(command, CMD_RMDIR) == 0) {
