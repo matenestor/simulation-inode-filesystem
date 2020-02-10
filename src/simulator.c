@@ -38,6 +38,13 @@ int load(const char* fsn) {
     if (access(fs_path, F_OK) == RETURN_SUCCESS) {
         // filesystem is ready to be loaded
         if ((filesystem = fopen(fs_path, "rb+")) != NULL) {
+            // cache super block
+            fread(&sb, sizeof(struct superblock), 1, filesystem);
+            // move to inodes location
+            fseek(filesystem, sb.addr_inodes, SEEK_SET);
+            // cache root inode
+            fread(&in_actual, sizeof(struct inode), 1, filesystem);
+
             puts("Filesystem loaded successfully.");
             puts(PR_TRY_HELP);
 

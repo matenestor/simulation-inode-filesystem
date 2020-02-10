@@ -21,7 +21,7 @@
 
 extern FILE* filesystem;
 extern struct superblock sb;
-extern struct inode actual;
+extern struct inode in_actual;
 
 
 #endif

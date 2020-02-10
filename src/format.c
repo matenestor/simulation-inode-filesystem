@@ -160,6 +160,9 @@ int init_inodes(const size_t clstr_cnt) {
     // write root inode to file
     fwrite(&in, sizeof(struct inode), 1, filesystem);
 
+    // cache root inode
+    memcpy(&in_actual, &in, sizeof(struct inode));
+
     // reset values for rest of the inodes
     in.item_type = Item_free;
     in.file_size = 0;

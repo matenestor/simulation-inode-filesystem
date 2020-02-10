@@ -83,9 +83,9 @@ FILE* filesystem;
 /** Super block of actual using filesystem. */
 struct superblock sb = {0};
 /** Inode, where user currently is. */
-struct inode actual = {0};
+struct inode in_actual = {0};
 /** Inode used for commands -- cp, mv, incp, outcp. */
-struct inode distant = {0};
+struct inode in_distant = {0};
 
 extern int cp_(char*, char*);
 extern int mv_(char*, char*);
