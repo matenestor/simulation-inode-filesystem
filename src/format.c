@@ -229,12 +229,7 @@ int format_(const char* fs_size_str, const char* path) {
             // inodes
             init_inodes(clstr_cnt);
             // data clusters
-
-            clock_t start = clock();
             init_clusters(mb2b(fs_size));
-            clock_t end = clock();
-            float seconds = (float)(end - start) / CLOCKS_PER_SEC;
-            printf(">>> %f\n", seconds);
 
             // move fs pointer (hdd head) to the beginning
             fseek(filesystem, 0, SEEK_SET);

@@ -18,7 +18,6 @@
 #define isnegnum(cha) (cha[0] == '-')
 #define isinrange(n)  ((n) > 0 && (n) <= FS_SIZE_MAX)
 #define mb2b(mb)      ((mb)*1024*1024)
-#define kb2b(kb)      ((kb)*1024)
 
 extern FILE* filesystem;
 extern struct superblock sb;
