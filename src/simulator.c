@@ -16,7 +16,7 @@ void clear_buffer(char* buff, const size_t size) {
 void close_filesystem() {
     if (filesystem != NULL) {
         fclose(filesystem);
-        log_info("Filesystem [%s] closed.", fsname);
+        log_info("Filesystem [%s] closed.", fs_name);
     }
 }
 
@@ -27,21 +27,21 @@ int load(const char* fsn) {
     log_info("Loading filesystem with name [%s].", fsn);
 
     // cache filesystem name (only fs name)
-    strncpy(fsname, fsn, STRLEN_FSNAME);
+    strncpy(fs_name, fsn, STRLEN_FSNAME);
     // cache filesystem path (both fs dir and fs name)
-    snprintf(fspath, STRLEN_FSPATH, FORMAT_FSDIR, fsname);
+    snprintf(fs_path, STRLEN_FSPATH, FORMAT_FSDIR, fs_name);
 
     // create prompt, initial pwd is root
-    snprintf(buff_prompt, STRLEN_PROMPT, FORMAT_PROMPT, fsname, SEPARATOR);
+    snprintf(buff_prompt, STRLEN_PROMPT, FORMAT_PROMPT, fs_name, SEPARATOR);
 
     // if filesystem exists, load it
-    if (access(fspath, F_OK) == RETURN_SUCCESS) {
+    if (access(fs_path, F_OK) == RETURN_SUCCESS) {
         // filesystem is ready to be loaded
-        if ((filesystem = fopen(fspath, "rb+")) != NULL) {
+        if ((filesystem = fopen(fs_path, "rb+")) != NULL) {
             puts("Filesystem loaded successfully.");
             puts(PR_TRY_HELP);
 
-            log_info("Filesystem [%s] loaded.", fspath);
+            log_info("Filesystem [%s] loaded.", fs_path);
         }
         // filesystem is ready to be loaded, but there was an error
         else {
@@ -54,7 +54,7 @@ int load(const char* fsn) {
         puts("No filesystem with this name found. You can format one with command 'format <size>'.");
         puts(PR_TRY_HELP);
 
-        log_info("Filesystem [%s] not found.", fspath);
+        log_info("Filesystem [%s] not found.", fs_path);
     }
 
     return ret;
@@ -105,9 +105,6 @@ void run() {
     // arguments for paths can be as long as whole input buffer (without some chars, but just leave it)
     char arg1[BUFFIN_LENGTH] = {0};
     char arg2[BUFFIN_LENGTH] = {0};
-
-    struct inode actual = {0};
-    struct inode distant = {0};
 
     bool is_running = true;
 
@@ -171,7 +168,7 @@ void run() {
             }
 
             else if (strcmp(command, CMD_FORMAT) == 0) {
-                if (format_(arg1, &filesystem, fspath, &actual) == RETURN_FAILURE) {
+                if (format_(arg1, fs_path) == RETURN_FAILURE) {
                     my_perror("format");
                     reset_myerrno();
                     log_error("Filesystem could not be formatted.");
@@ -196,7 +193,7 @@ void run() {
             }
 
             else {
-                puts("command not found");
+                puts("zos: command not found");
                 puts(PR_TRY_HELP);
             }
         }

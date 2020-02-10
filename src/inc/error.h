@@ -8,9 +8,9 @@
 enum __error {
     No_error,
     Signal_interrupt,
-    Fsname_missing,
-    Fsname_long,
-    Fsname_invalid,
+    Fs_name_missing,
+    Fs_name_long,
+    Fs_name_invalid,
     Fs_not_loaded,
     Fs_not_formatted,
     Fs_size_sim_range,

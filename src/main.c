@@ -27,7 +27,7 @@ void signal_handler(int signum) {
  * 	On error, -1 is returned, and my_errno is set appropriately.
  *
  */
-int parse_fsname(char* fsname, const char* arg_name) {
+int parse_fsname(char* fs_name, const char* arg_name) {
     // return value
     int ret = RETURN_SUCCESS;
 
@@ -40,17 +40,17 @@ int parse_fsname(char* fsname, const char* arg_name) {
             // not valid if char is not letter, number or underscore
             if (!(isalnum(arg_name[i]) || isunscr(arg_name[i]) || isdot(arg_name[i]))) {
                 fputs("Use only letters, numbers, dots and/or underscores!\n", stderr);
-                set_myerrno(Fsname_invalid);
+                set_myerrno(Fs_name_invalid);
                 ret = RETURN_FAILURE;
             }
         }
 
         // parse name if is valid
-        strncpy(fsname, arg_name, len);
+        strncpy(fs_name, arg_name, len);
     }
     else {
         fputs("Maximal length on name is 31 characters!\n", stderr);
-        set_myerrno(Fsname_long);
+        set_myerrno(Fs_name_long);
         ret = RETURN_FAILURE;
     }
 
@@ -60,7 +60,7 @@ int parse_fsname(char* fsname, const char* arg_name) {
 
 int main(int argc, char const **argv) {
     // name of filesystem given by user
-    char fsname[STRLEN_FSNAME] = {0};
+    char fs_name[STRLEN_FSNAME] = {0};
 
     // used for initialization
     reset_myerrno();
@@ -75,11 +75,11 @@ int main(int argc, char const **argv) {
 
     // if name was provided, try to parse it
     if (argc > 1) {
-        parse_fsname(fsname, argv[1]);
+        parse_fsname(fs_name, argv[1]);
     }
     // if no name was provided, set my_errno
     else {
-        set_myerrno(Fsname_missing);
+        set_myerrno(Fs_name_missing);
     }
 
     // if name is ok, load and run
@@ -88,7 +88,7 @@ int main(int argc, char const **argv) {
 
         // run, if filesystem was loaded successfully, when exists,
         // or user was notified about possible formatting, when doesn't exists
-        if (load(fsname) == RETURN_SUCCESS) {
+        if (load(fs_name) == RETURN_SUCCESS) {
             run();
         }
         else {

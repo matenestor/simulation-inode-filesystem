@@ -65,20 +65,27 @@
 #define CMD_HELP     "help"
 #define CMD_EXIT     "exit"
 
-#define isoverflow(c) ((c)!='\n' && (c)!='\0')
+#define isoverflow(c) ((c) != '\n' && (c) != '\0')
 
 /** Filesystem name given by user. Does not change during runtime. */
-static char fsname[STRLEN_FSNAME];
+static char fs_name[STRLEN_FSNAME];
 /** Filesystem path. Does not change during runtime. */
-static char fspath[STRLEN_FSPATH];
+static char fs_path[STRLEN_FSPATH];
 
 /** Current working directory cache. Do change after every 'cd' command. */
-static char buff_pwd[BUFF_PWD];
+char buff_pwd[BUFF_PWD];
 /** Whole prompt in console. Do change after every pwd change. */
-static char buff_prompt[STRLEN_PROMPT];
+char buff_prompt[STRLEN_PROMPT];
 
 /** Filesystem file, which is being worked with. */
-static FILE* filesystem;
+FILE* filesystem;
+
+/** Super block of actual using filesystem. */
+struct superblock sb = {0};
+/** Inode, where user currently is. */
+struct inode actual = {0};
+/** Inode used for commands -- cp, mv, incp, outcp. */
+struct inode distant = {0};
 
 extern int cp_(char*, char*);
 extern int mv_(char*, char*);
@@ -93,7 +100,7 @@ extern int info_(char*);
 extern int incp_(char*, char*);
 extern int outcp_(char*, char*);
 extern int load_(char*);
-extern int format_(char*, FILE**, char*, struct inode*);
+extern int format_(char*, char*);
 extern int fsck_();
 extern int tree_(char*);
 

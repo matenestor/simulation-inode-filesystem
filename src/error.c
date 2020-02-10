@@ -28,15 +28,15 @@ char* my_strerror(const enum __error err) {
             strcpy(err_str, "signal interrupt");
             break;
 
-        case Fsname_missing:
+        case Fs_name_missing:
             strcpy(err_str, "filesystem name not provided");
             break;
 
-        case Fsname_long:
+        case Fs_name_long:
             strcpy(err_str, "filesystem name too long");
             break;
 
-        case Fsname_invalid:
+        case Fs_name_invalid:
             strcpy(err_str, "filesystem name invalid");
             break;
 

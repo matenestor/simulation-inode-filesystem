@@ -8,11 +8,17 @@
 /** 7 chars (name) + dot + 3 chars (extension) + \0 = 12 chars in total for item name */
 #define STRLEN_ITEM_NAME 12
 
-/** Empty item constant. TODO needed? */
-//const int32_t ID_ITEM_FREE = 0;
+/** Free link in inode. */
+#define FREE_LINK -1
+
+// macros for finding out usage of inode
+#define isinfree(in) (in->item_type==Item_free)
+#define isinfile(in) (in->item_type==Item_file)
+#define isindirc(in) (in->item_type==Item_directory)
 
 /** Types of items available in filesystem. */
 enum item {
+    Item_free,
     Item_file,
     Item_directory
 };
@@ -33,7 +39,6 @@ struct inode {
     // meta
     int32_t id_node;                 // i-node id
     enum item item_type;             // type of item in filesystem
-    int8_t references;               // count of references (used for hardlinks)
     int32_t file_size;               // size of file
     // links
     int32_t direct1;                 // 1. direct link on data clusters
@@ -46,8 +51,8 @@ struct inode {
 };
 
 struct directory_item {
-    char item_name[STRLEN_ITEM_NAME];
-    int32_t fk_id_node;                   // i-node of file
+    char item_name[STRLEN_ITEM_NAME];   // name of item in directory
+    int32_t fk_id_node;                 // i-node of file
 };
 
 
