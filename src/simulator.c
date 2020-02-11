@@ -4,18 +4,14 @@
 
 #include "inc/error.h"
 #include "inc/logger_api.h"
-#include "inc/return_codes.h"
+
 #include "inc/simulator.h"
-
-
-void clear_buffer(char* buff, const size_t size) {
-    memset(buff, '\0', size);
-}
+#include "inc/return_codes.h"
 
 
 void close_filesystem() {
-    if (filesystem != NULL) {
-        fclose(filesystem);
+    if (FS_VARIABLE_NAME != NULL) {
+        fclose(FS_VARIABLE_NAME);
         log_info("Filesystem [%s] closed.", fs_name);
     }
 }
@@ -37,13 +33,13 @@ int load(const char* fsn) {
     // if filesystem exists, load it
     if (access(fs_path, F_OK) == RETURN_SUCCESS) {
         // filesystem is ready to be loaded
-        if ((filesystem = fopen(fs_path, "rb+")) != NULL) {
+        if ((FS_VARIABLE_NAME = fopen(fs_path, "rb+")) != NULL) {
             // cache super block
-            fread(&sb, sizeof(struct superblock), 1, filesystem);
+            FS_READ(&sb, sizeof(struct superblock), 1);
             // move to inodes location
-            fseek(filesystem, sb.addr_inodes, SEEK_SET);
+            FS_SEEK_SET(sb.addr_inodes);
             // cache root inode
-            fread(&in_actual, sizeof(struct inode), 1, filesystem);
+            FS_READ(&in_actual, sizeof(struct inode), 1);
 
             puts("Filesystem loaded successfully.");
             puts(PR_TRY_HELP);
@@ -209,11 +205,102 @@ void run() {
         }
 
         // input buffer is small, so just clear it all
-        clear_buffer(command, STRLEN_LONGEST_CMD);
+        BUFF_CLR(command, STRLEN_LONGEST_CMD);
         // buffers for arguments are cleared only as much as necessary (a bit of optimization)
-        clear_buffer(arg1, strlen(arg1));
-        clear_buffer(arg2, strlen(arg2));
+        BUFF_CLR(arg1, strlen(arg1));
+        BUFF_CLR(arg2, strlen(arg2));
     }
 
     log_info("Simulation end.");
+}
+
+
+
+
+
+
+
+
+
+int cp_(char* arg1, char* arg2) {
+    int ret = RETURN_FAILURE;
+    return ret;
+}
+
+
+int mv_(char* arg1, char* arg2) {
+    int ret = RETURN_FAILURE;
+    return ret;
+}
+
+
+int rm_(char* arg1) {
+    int ret = RETURN_FAILURE;
+    return ret;
+}
+
+
+int rmdir_(char* arg1) {
+    int ret = RETURN_FAILURE;
+    return ret;
+}
+
+
+int ls_(char* arg1) {
+    int ret = RETURN_FAILURE;
+    return ret;
+}
+
+
+int cat_(char* arg1) {
+    int ret = RETURN_FAILURE;
+    return ret;
+}
+
+
+int cd_(char* arg1) {
+    int ret = RETURN_FAILURE;
+    return ret;
+}
+
+
+int pwd_() {
+    int ret = RETURN_FAILURE;
+    return ret;
+}
+
+
+int info_(char* arg1) {
+    int ret = RETURN_FAILURE;
+    return ret;
+}
+
+
+int incp_(char* arg1, char* arg2) {
+    int ret = RETURN_FAILURE;
+    return ret;
+}
+
+
+int outcp_(char* arg1, char* arg2) {
+    int ret = RETURN_FAILURE;
+    return ret;
+}
+
+
+int load_(char* arg1) {
+    int ret = RETURN_FAILURE;
+    return ret;
+}
+
+
+int fsck_() {
+    int ret = RETURN_FAILURE;
+    return ret;
+}
+
+
+int tree_(char* arg1) {
+    int ret = RETURN_FAILURE;
+    return ret;
 }

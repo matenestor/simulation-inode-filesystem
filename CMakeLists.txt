@@ -11,7 +11,7 @@ add_executable(KIV_ZOS_sp
         src/inc/return_codes.h
 
         src/simulator.c src/inc/simulator.h
-        src/inc/fspath_info.h
+        src/inc/fs_path.h
         src/inc/inode.h
-        src/commands.c src/inc/commands.h
-        src/format.c src/inc/format.h)
+        src/fs_operations.c src/inc/fs_operations.h
+        src/commands/format.c src/inc/format.h src/commands/mkdir.c src/inc/fs_cache.h src/inc/_fs_varname.h)

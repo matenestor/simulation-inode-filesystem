@@ -2,7 +2,8 @@
 #define SIMULATOR_H
 
 #include "inode.h"
-#include "fspath_info.h"
+#include "fs_operations.h"
+#include "fs_path.h"
 
 
 // since there is no standard way to flush stdin and making resizable input buffer
@@ -17,7 +18,6 @@
 // length of longest command available 'format' is 7 with \0
 #define STRLEN_LONGEST_CMD 7
 
-#define SEPARATOR     "/"
 #define FORMAT_PROMPT "%s:%s> "
 
 #define PR_TRY_HELP "Try 'help' for more information."
@@ -65,7 +65,8 @@
 #define CMD_HELP     "help"
 #define CMD_EXIT     "exit"
 
-#define isoverflow(c) ((c) != '\n' && (c) != '\0')
+#define isoverflow(c)          ((c) != '\n' && (c) != '\0')
+#define BUFF_CLR(dest, count)  memset(dest, '\0', count)
 
 /** Filesystem name given by user. Does not change during runtime. */
 static char fs_name[STRLEN_FSNAME];
@@ -78,7 +79,7 @@ char buff_pwd[BUFF_PWD];
 char buff_prompt[STRLEN_PROMPT];
 
 /** Filesystem file, which is being worked with. */
-FILE* filesystem;
+FILE* FS_VARIABLE_NAME;
 
 /** Super block of actual using filesystem. */
 struct superblock sb = {0};
@@ -100,7 +101,7 @@ extern int info_(char*);
 extern int incp_(char*, char*);
 extern int outcp_(char*, char*);
 extern int load_(char*);
-extern int format_(char*, char*);
+extern int format_(const char*, const char*);
 extern int fsck_();
 extern int tree_(char*);
 

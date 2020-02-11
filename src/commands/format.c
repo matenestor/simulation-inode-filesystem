@@ -1,43 +1,18 @@
 #include <sys/types.h>
-#include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
-#include "inc/error.h"
-#include "inc/format.h"
-#include "inc/inode.h"
-#include "inc/logger_api.h"
-#include "inc/return_codes.h"
+#include "../inc/error.h"
+#include "../inc/logger_api.h"
 
-
-bool isnumeric(const char* num) {
-    bool is_num = true;
-
-    for (size_t i = 0; i < strlen(num); ++i) {
-        if (!isdigit(num[i])) {
-            is_num = false;
-        }
-    }
-
-    return is_num;
-}
-
-
-void get_datetime(char* datetime) {
-    time_t t;
-    struct tm* tm_info;
-
-    // get time
-    t = time(NULL);
-    tm_info = localtime(&t);
-
-    // Mon Jan 01 00:00:00 2020
-    strftime(datetime, DATETIME_LENGTH, "%Y-%m-%d %H:%M:%S", tm_info);
-}
+#include "../inc/format.h"
+#include "../inc/fs_cache.h"
+#include "../inc/fs_operations.h"
+#include "../inc/inode.h"
+#include "../inc/return_codes.h"
 
 
 int is_valid_size(const char* num_str, size_t* size) {
@@ -114,7 +89,7 @@ int init_superblock(const int size, const size_t clstr_cnt) {
     sb.addr_data = addr_dat;
 
     // write superblock to file
-    fwrite(&sb, sizeof(struct superblock), 1, filesystem);
+    FS_WRITE(&sb, sizeof(struct superblock), 1);
 
     return RETURN_SUCCESS;
 }
@@ -126,11 +101,11 @@ int init_bitmap(const size_t clstr_cnt) {
     bool f = false;
 
     // first block is used for root directory during format
-    fwrite(&f, sizeof(bool), 1, filesystem);
+    FS_WRITE(&f, sizeof(bool), 1);
 
     // write rest of bitmap of inodes to file
     for (i = 1; i < clstr_cnt; ++i) {
-        fwrite(&t, sizeof(bool), 1, filesystem);
+        FS_WRITE(&t, sizeof(bool), 1);
     }
 
     return RETURN_SUCCESS;
@@ -145,8 +120,8 @@ int init_inodes(const size_t clstr_cnt) {
     in.id_node = 0;
     // first inode is used for root directory during format
     in.item_type = Item_directory;
-    // root inode uses one data cluster after format
-    in.file_size = FS_CLUSTER_SIZE;
+    // file sizes for directories are 0
+    in.file_size = 0;
     // root inode point to data cluster on index 0
     in.direct1 = 0;
     // other links are free
@@ -158,20 +133,19 @@ int init_inodes(const size_t clstr_cnt) {
     in.indirect2 = FREE_LINK;
 
     // write root inode to file
-    fwrite(&in, sizeof(struct inode), 1, filesystem);
+    FS_WRITE(&in, sizeof(struct inode), 1);
 
     // cache root inode
     memcpy(&in_actual, &in, sizeof(struct inode));
 
     // reset values for rest of the inodes
     in.item_type = Item_free;
-    in.file_size = 0;
     in.direct1 = FREE_LINK;
 
     // init rest of inodes in filesystem
     for (i = 1; i < clstr_cnt; ++i) {
         in.id_node = i;
-        fwrite(&in, sizeof(struct inode), 1, filesystem);
+        FS_WRITE(&in, sizeof(struct inode), 1);
     }
 
     return RETURN_SUCCESS;
@@ -181,28 +155,28 @@ int init_inodes(const size_t clstr_cnt) {
 int init_clusters(const size_t fs_size) {
     size_t i;
     // how much bytes is missing till end of filesystem
-    size_t diff = fs_size - ftell(filesystem);
+    size_t diff = fs_size - FS_TELL;
     // helper array to be filled from
     char zeros[BATCH_SIZE] = {0};
 
     // note: this filling with batches is faster, than filling it one char by one
     // fill rest of filesystem with batches of zeros
     for (i = 0; i < diff / BATCH_SIZE; ++i) {
-        fwrite(zeros, sizeof(char), BATCH_SIZE, filesystem);
+        FS_WRITE(zeros, sizeof(char), BATCH_SIZE);
     }
     // fill zeros left till very end of filesystem
-    fwrite(zeros, sizeof(char), diff % BATCH_SIZE, filesystem);
+    FS_WRITE(zeros, sizeof(char), diff % BATCH_SIZE);
 
     // move fs pointer to the beginning of data clusters
-    fseek(filesystem, sb.addr_data, SEEK_SET);
+    FS_SEEK_SET(sb.addr_data);
     // init root directory item
-    struct directory_item di = {"/", 0};
+    struct directory_item di = {SEPARATOR, 0};
     // write root directory to file
-    fwrite(&di, sizeof(struct directory_item), 1, filesystem);
+    FS_WRITE(&di, sizeof(struct directory_item), 1);
 
     // init this directory in root directory and write it also
     strcpy(di.item_name, ".");
-    fwrite(&di, sizeof(struct directory_item), 1, filesystem);
+    FS_WRITE(&di, sizeof(struct directory_item), 1);
 
     return RETURN_SUCCESS;
 }
@@ -215,7 +189,7 @@ int format_(const char* fs_size_str, const char* path) {
     log_info("Formatting filesystem [%s]", path);
 
     if (is_valid_size(fs_size_str, &fs_size) == RETURN_SUCCESS) {
-        if ((filesystem = fopen(path, "wb+")) != NULL) {
+        if ((FS_VARIABLE_NAME = fopen(path, "wb+")) != NULL) {
 
             // count of clusters in data block is also used as bitmaps sizes and count of inodes
             // size is in MB, cluster_size is in B
@@ -234,8 +208,10 @@ int format_(const char* fs_size_str, const char* path) {
             // data clusters
             init_clusters(mb2b(fs_size));
 
+            // TODO create root folder / with mkdir, not manually
+
             // move fs pointer (hdd head) to the beginning
-            fseek(filesystem, 0, SEEK_SET);
+            FS_SEEK_SET(0);
 
             log_info("Filesystem [%s] with size [%d] formatted.", path, fs_size);
             printf("format: filesystem formatted, size: %zu MB\n", fs_size);

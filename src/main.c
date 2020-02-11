@@ -5,9 +5,10 @@
 #include <string.h>
 
 #include "inc/error.h"
-#include "inc/fspath_info.h"
 #include "inc/logger_api.h"
+
 #include "inc/main.h"
+#include "inc/fs_path.h"
 #include "inc/return_codes.h"
 
 

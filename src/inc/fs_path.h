@@ -1,5 +1,5 @@
-#ifndef FSPATH_INFO_H
-#define FSPATH_INFO_H
+#ifndef FS_PATH_H
+#define FS_PATH_H
 
 
 #define STRLEN_FSDIR  3
