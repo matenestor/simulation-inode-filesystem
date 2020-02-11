@@ -4,12 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "inc/error.h"
-#include "inc/logger_api.h"
-
-#include "inc/main.h"
+#include "main.h"
 #include "inc/fs_path.h"
 #include "inc/return_codes.h"
+
+#include "error.h"
+#include "inc/logger_api.h"
 
 
 void signal_handler(int signum) {

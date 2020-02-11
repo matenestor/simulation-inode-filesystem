@@ -2,7 +2,7 @@
 #include <stdarg.h>
 #include <time.h>
 
-#include "inc/_logger.h"
+#include "_logger.h"
 #include "inc/return_codes.h"
 
 

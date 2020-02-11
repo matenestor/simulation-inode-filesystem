@@ -5,14 +5,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../inc/error.h"
-#include "../inc/logger_api.h"
-
-#include "../inc/format.h"
+#include "format.h"
 #include "../inc/fs_cache.h"
 #include "../inc/fs_operations.h"
 #include "../inc/inode.h"
 #include "../inc/return_codes.h"
+
+#include "../error.h"
+#include "../inc/logger_api.h"
 
 
 int is_valid_size(const char* num_str, size_t* size) {

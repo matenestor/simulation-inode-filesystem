@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#include "logger_api.h"
+#include "inc/logger_api.h"
 
 
 /** Size of buffer for logging. */

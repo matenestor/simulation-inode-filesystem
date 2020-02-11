@@ -1,9 +1,9 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
-#include "inode.h"
-#include "fs_operations.h"
-#include "fs_path.h"
+#include "inc/inode.h"
+#include "inc/fs_operations.h"
+#include "inc/fs_path.h"
 
 
 // since there is no standard way to flush stdin and making resizable input buffer
@@ -43,7 +43,7 @@
                  "  tree    [DIRECTORY]       List contents of directories in a tree-like format.\n" \
                  "  help                      Print this help.\n" \
                  "  exit                      Exit simulation.\n\n" \
-                 "  - Note, that commands will accept only exact count of arguments as written above, not more." \
+                 "  - Note, that commands will accept only exact count of arguments as written above, not more.\n" \
                  "    Other arguments are discarded. Arguments in [] brackets are optional.\n"
 
 #define CMD_CP       "cp"

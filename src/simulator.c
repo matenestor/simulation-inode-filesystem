@@ -2,11 +2,11 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "inc/error.h"
-#include "inc/logger_api.h"
-
-#include "inc/simulator.h"
+#include "simulator.h"
 #include "inc/return_codes.h"
+
+#include "error.h"
+#include "inc/logger_api.h"
 
 
 void close_filesystem() {

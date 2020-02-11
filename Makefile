@@ -9,10 +9,11 @@ BIN = inode
 # logging directory
 DIR_LOG = log/
 
-# source directory
-DIR_SRC = src/
+# source directories
+ROOT = src/
+DIR_SRC = $(ROOT) $(ROOT)commands/
 # headers directory
-DIR_INC = $(DIR_SRC)inc/
+DIR_INC = $(ROOT)inc/
 # object directory
 DIR_OBJ = obj/
 
@@ -22,30 +23,29 @@ DIR_FS = fs/
 # include location of dependent header files
 IDEPS = -I$(DIR_INC)
 
-# each .h file in include folder
-HDR = $(wildcard $(DIR_INC)*.h)
 # each .c file in source folder
-SRC = $(wildcard $(DIR_SRC)*.c)
+SRC = $(foreach DSRC, $(DIR_SRC), $(wildcard $(DSRC)*.c))
 # all object files
-OBJ = $(patsubst $(DIR_SRC)%,$(DIR_OBJ)%.o,$(SRC))
+OBJ = $(patsubst $(ROOT)%.c, $(DIR_OBJ)%.c.o, $(SRC))
 
 RM = rm -rf
 
 
 all: mkdirs $(BIN)
 
-$(BIN): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^
-
-$(DIR_OBJ)%.o: $(DIR_SRC)% $(HDR)
-	$(CC) $(CFLAGS) $(IDEPS) -c $< -o $@
-
 .PHONY: all
 
 
+$(BIN): $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(DIR_OBJ)%.o: $(ROOT)%
+	$(CC) $(CFLAGS) $(IDEPS) -c $< -o $@
+
+
 mkdirs:
+	mkdir -p $(patsubst $(ROOT)%, $(DIR_OBJ)%, $(DIR_SRC))
 	mkdir -p $(DIR_LOG)
-	mkdir -p $(DIR_OBJ)
 	mkdir -p $(DIR_FS)
 
 .PHONY: mkdirs
