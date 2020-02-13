@@ -1,18 +1,45 @@
 #include <sys/types.h>
+#include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "format.h"
 #include "../inc/fs_cache.h"
-#include "../inc/fs_operations.h"
 #include "../inc/inode.h"
 #include "../inc/return_codes.h"
+#include "../fs_operations.h"
 
-#include "../error.h"
 #include "../inc/logger_api.h"
+#include "../error.h"
+
+
+bool isnumeric(const char* num) {
+    bool is_num = true;
+
+    for (size_t i = 0; i < strlen(num); ++i) {
+        if (!isdigit(num[i])) {
+            is_num = false;
+        }
+    }
+
+    return is_num;
+}
+
+
+void get_datetime(char* datetime) {
+    time_t t;
+    struct tm* tm_info;
+
+    // get time
+    t = time(NULL);
+    tm_info = localtime(&t);
+
+    strftime(datetime, DATETIME_LENGTH, "%Y-%m-%d %H:%M:%S", tm_info);
+}
 
 
 int is_valid_size(const char* num_str, size_t* size) {
@@ -120,8 +147,8 @@ int init_inodes(const size_t clstr_cnt) {
     in.id_node = 0;
     // first inode is used for root directory during format
     in.item_type = Item_directory;
-    // file sizes for directories are 0
-    in.file_size = 0;
+    // file size for directories is size of data cluster
+    in.file_size = FS_CLUSTER_SIZE;
     // root inode point to data cluster on index 0
     in.direct1 = 0;
     // other links are free
@@ -140,6 +167,7 @@ int init_inodes(const size_t clstr_cnt) {
 
     // reset values for rest of the inodes
     in.item_type = Item_free;
+    in.file_size = 0;
     in.direct1 = FREE_LINK;
 
     // init rest of inodes in filesystem
@@ -157,15 +185,15 @@ int init_clusters(const size_t fs_size) {
     // how much bytes is missing till end of filesystem
     size_t diff = fs_size - FS_TELL;
     // helper array to be filled from
-    char zeros[BATCH_SIZE] = {0};
+    char zeros[CACHE_SIZE] = {0};
 
     // note: this filling with batches is faster, than filling it one char by one
     // fill rest of filesystem with batches of zeros
-    for (i = 0; i < diff / BATCH_SIZE; ++i) {
-        FS_WRITE(zeros, sizeof(char), BATCH_SIZE);
+    for (i = 0; i < diff / CACHE_SIZE; ++i) {
+        FS_WRITE(zeros, sizeof(char), CACHE_SIZE);
     }
     // fill zeros left till very end of filesystem
-    FS_WRITE(zeros, sizeof(char), diff % BATCH_SIZE);
+    FS_WRITE(zeros, sizeof(char), diff % CACHE_SIZE);
 
     // move fs pointer to the beginning of data clusters
     FS_SEEK_SET(sb.addr_data);

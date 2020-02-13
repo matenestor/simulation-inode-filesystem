@@ -5,8 +5,8 @@
 #include "simulator.h"
 #include "inc/return_codes.h"
 
-#include "error.h"
 #include "inc/logger_api.h"
+#include "error.h"
 
 
 void close_filesystem() {

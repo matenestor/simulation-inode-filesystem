@@ -26,7 +26,7 @@ enum item {
 struct superblock {
     char signature[16];             // signature of author
     char volume_descriptor[256];    // description of filesystem
-    int32_t disk_size;              // total size of filesystem
+    int32_t disk_size;              // total size of filesystem in MB
     int32_t cluster_size;           // cluster size in data part of filesystem
     int32_t cluster_count;          // cluster count in data part of filesystem
     int32_t addr_bm_inodes;         // address of start of i-nodes bitmap

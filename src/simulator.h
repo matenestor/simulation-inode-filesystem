@@ -2,7 +2,7 @@
 #define SIMULATOR_H
 
 #include "inc/inode.h"
-#include "inc/fs_operations.h"
+#include "fs_operations.h"
 #include "inc/fs_path.h"
 
 

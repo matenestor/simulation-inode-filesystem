@@ -3,9 +3,9 @@
 #include <string.h>
 
 #include "../inc/fs_cache.h"
-#include "../inc/fs_operations.h"
 #include "../inc/inode.h"
 #include "../inc/return_codes.h"
+#include "../fs_operations.h"
 
 #include "../error.h"
 
@@ -36,7 +36,7 @@ int mkdir_(char* path) {
         // TODO
         //  - check last nonempty link in inode
         //  - check if in link's cluster is still space for another directory item
-        //    - yes, mkdir
+        //    - yes, mkdir -> get first free inode
         //    - no, use another link in inode[1], mkdir
 
         // TODO [1]

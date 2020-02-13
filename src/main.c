@@ -8,8 +8,8 @@
 #include "inc/fs_path.h"
 #include "inc/return_codes.h"
 
-#include "error.h"
 #include "inc/logger_api.h"
+#include "error.h"
 
 
 void signal_handler(int signum) {

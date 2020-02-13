@@ -21,7 +21,7 @@ void logger_destroy();
 void logger_set_level(enum __level);
 
 // types of log messages
-// TODO rewrite as macros
+// TODO longterm: rewrite as macros
 void log_fatal(const char*, ...);
 void log_error(const char*, ...);
 void log_warning(const char*, ...);
