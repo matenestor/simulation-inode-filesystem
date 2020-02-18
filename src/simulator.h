@@ -1,9 +1,9 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
+#include "inc/fs_path.h"
 #include "inc/inode.h"
 #include "fs_operations.h"
-#include "inc/fs_path.h"
 
 
 // since there is no standard way to flush stdin and making resizable input buffer

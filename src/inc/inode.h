@@ -11,6 +11,9 @@
 /** Free link in inode. */
 #define FREE_LINK -1
 
+/** Count of direct links in inode. */
+#define COUNT_DIRECT_LINKS 5
+
 // macros for finding out usage of inode
 #define isinfree(in) (in->item_type==Item_free)
 #define isinfile(in) (in->item_type==Item_file)

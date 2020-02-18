@@ -19,3 +19,7 @@
 
 
 #endif
+
+// TODO improve
+//  bigger filesystem size, than 1 GB
+//  changeable size of clusters, not only 1 kB

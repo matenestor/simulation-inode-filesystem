@@ -118,6 +118,8 @@ void run() {
         // parse input and check which command it is
         if (handle_input(command, arg1, arg2) == RETURN_SUCCESS) {
 
+            // TODO do not allow commands, except for 'format, help, exit', when filesystem is not formatted
+
             if (strcmp(command, CMD_CP) == 0) {
                 cp_(arg1, arg2);
             }
