@@ -110,6 +110,8 @@ int init_superblock(const int size, const size_t clstr_cnt) {
     sb.disk_size = size;
     sb.cluster_size = FS_CLUSTER_SIZE;
     sb.cluster_count = clstr_cnt;
+	sb.count_links = sb.cluster_size / sizeof(int32_t);
+	sb.count_dir_items = sb.cluster_size / sizeof(struct directory_item);
     sb.addr_bm_inodes = addr_bm_in;
     sb.addr_bm_data = addr_bm_dat;
     sb.addr_inodes = addr_in;
@@ -117,6 +119,8 @@ int init_superblock(const int size, const size_t clstr_cnt) {
 
     // write superblock to file
     FS_WRITE(&sb, sizeof(struct superblock), 1);
+
+	FS_FLUSH;
 
     return RETURN_SUCCESS;
 }
@@ -134,6 +138,8 @@ int init_bitmap(const size_t clstr_cnt) {
     for (i = 1; i < clstr_cnt; ++i) {
         FS_WRITE(&t, sizeof(bool), 1);
     }
+
+	FS_FLUSH;
 
     return RETURN_SUCCESS;
 }
@@ -176,7 +182,9 @@ int init_inodes(const size_t clstr_cnt) {
         FS_WRITE(&in, sizeof(struct inode), 1);
     }
 
-    return RETURN_SUCCESS;
+	FS_FLUSH;
+
+	return RETURN_SUCCESS;
 }
 
 
@@ -195,6 +203,8 @@ int init_clusters(const size_t fs_size) {
     // fill zeros left till very end of filesystem
     FS_WRITE(zeros, sizeof(char), diff % CACHE_SIZE);
 
+	FS_FLUSH;
+
     // move fs pointer to the beginning of data clusters
     FS_SEEK_SET(sb.addr_data);
     // init root directory item
@@ -205,6 +215,8 @@ int init_clusters(const size_t fs_size) {
     // init this directory in root directory and write it also
     strcpy(di.item_name, ".");
     FS_WRITE(&di, sizeof(struct directory_item), 1);
+
+	FS_FLUSH;
 
     return RETURN_SUCCESS;
 }

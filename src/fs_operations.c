@@ -9,43 +9,12 @@
 #include "error.h"
 
 
-bool is_free_inode() {
-    bool free_inode = false;
-    size_t i, j;
-    bool bm_in[CACHE_SIZE] = {0};
-
-    for (i = 0; i < sb.cluster_count; i += CACHE_SIZE) {
-        // cache part of bitmap
-        FS_SEEK_SET(sb.addr_bm_inodes);
-        FS_READ(&bm_in, sizeof(bool), CACHE_SIZE);
-
-        // check cached array for free inodes
-        for (j = i; j < CACHE_SIZE; ++j) {
-            // check if inode is free
-            if (bm_in[j]) {
-                free_inode = true;
-                break;
-            }
-        }
-
-        // if free inode was found, break
-        if (free_inode)
-            break;
-    }
-
-
-    return free_inode;
-}
-
-
 static int32_t get_item_by_name(const char* name, int32_t* links, const size_t size) {
     int32_t id = -1;
     size_t i, j, items;
 
-    // maximum count of directory items in cluster
-    const size_t count_dir_items = sb.cluster_size / sizeof(struct directory_item);
     // array with directory items in cluster
-    struct directory_item cluster[count_dir_items];
+    struct directory_item cluster[sb.count_dir_items];
 
     // check every link to cluster with directory items
     for (i = 0; i < size; ++i) {
@@ -56,7 +25,7 @@ static int32_t get_item_by_name(const char* name, int32_t* links, const size_t s
 
         // try to read maximum count in cluster -- only successful count of read elements is assigned
         FS_SEEK_SET(sb.addr_data + links[i]);
-        items = FS_READ(&cluster, sizeof(struct directory_item), count_dir_items);
+        items = FS_READ(&cluster, sizeof(struct directory_item), sb.count_dir_items);
 
         // loop over existing directory items
         for (j = 0; j < items; ++j) {
@@ -79,13 +48,10 @@ static int32_t get_inodeid_by_inodename(const struct inode* source, const char* 
     int32_t id = -1;
     size_t i, items;
 
-    // maximum count of (in)direct links in cluster
-    const size_t count_links = sb.cluster_size / sizeof(int32_t);
-
     // array with links to be checked
-    int32_t links[count_links];
+    int32_t links[sb.count_links];
     // array with indirect links in cluster
-    int32_t indirect_links[count_links];
+    int32_t indirect_links[sb.count_links];
 
     // first -- check direct links
     links[0] = source->direct1;
@@ -99,7 +65,7 @@ static int32_t get_inodeid_by_inodename(const struct inode* source, const char* 
     if (source->indirect1 != FREE_LINK && id == -1) {
         // read whole cluster with 1st level indirect links to clusters with data
         FS_SEEK_SET(sb.addr_data + source->indirect1);
-        items = FS_READ(links, sizeof(int32_t), count_links);
+        items = FS_READ(links, sizeof(int32_t), sb.count_links);
 
         id = get_item_by_name(name, links, items);
     }
@@ -108,12 +74,12 @@ static int32_t get_inodeid_by_inodename(const struct inode* source, const char* 
     if (source->indirect2 != FREE_LINK && id == -1) {
         // read whole cluster with 2nd level indirect links to clusters with 1st level indirect links
         FS_SEEK_SET(sb.addr_data + source->indirect2);
-        items = FS_READ(indirect_links, sizeof(int32_t), count_links);
+        items = FS_READ(indirect_links, sizeof(int32_t), sb.count_links);
 
         // loop over each 2nd level indirect link to get clusters with 1st level indirect links
         for (i = 0; i < items; ++i) {
             FS_SEEK_SET(sb.addr_data + indirect_links[i]);
-            items = FS_READ(links, sizeof(int32_t), count_links);
+            items = FS_READ(links, sizeof(int32_t), sb.count_links);
 
             get_item_by_name(name, links, items);
         }
@@ -181,3 +147,146 @@ int32_t get_inodeid_by_path(char* path) {
 
     return id;
 }
+
+
+int get_name(char* name, char* path) {
+	int ret = RETURN_FAILURE;
+	char* token = NULL;
+
+	// parse whole path, until last element, which is new name
+	for (token = strtok(path, SEPARATOR); token != NULL; token = strtok(NULL, SEPARATOR)) {
+		strncpy(name, path, STRLEN_ITEM_NAME);
+	}
+
+	// check if given name is not too long
+	if (name[STRLEN_ITEM_NAME - 1] != '\0') {
+		ret = RETURN_FAILURE;
+		set_myerrno(Item_name_long);
+	}
+
+	return ret;
+}
+
+
+int32_t get_last_link_value(const struct inode* source) {
+	size_t i;
+	int32_t value = FREE_LINK;
+	// links in REVERSED order
+	int32_t link_values[] = {source->indirect2, source->indirect1, source->direct5, source->direct4, source->direct3, source->direct2, source->direct1};
+
+	// check each link, if it point to some cluster
+	for (i = 0; i < LEN(link_values); ++i) {
+		// if yes, get its value and break
+		if (link_values[i] != FREE_LINK) {
+			value = link_values[i];
+			break;
+		}
+	}
+
+	return value;
+}
+
+
+static int32_t get_bitmap_empty_field(const int32_t address) {
+	size_t i, j, items;
+	size_t index = 0;
+	bool bitmap[CACHE_SIZE] = {0};
+
+	for (i = 0; i < sb.cluster_count; i += CACHE_SIZE) {
+		// cache part of bitmap
+		FS_SEEK_SET(address + i);
+		items = FS_READ(bitmap, sizeof(bool), CACHE_SIZE);
+
+		// check cached array for a free field
+		for (j = 0; j < items; ++j) {
+			// check if field is free
+			if (bitmap[j]) {
+				bitmap[j] = false; // TODO fwrite this change
+				index = i * CACHE_SIZE + j;
+				break;
+			}
+		}
+
+		// if free field was found, break
+		if (index != 0)
+			break;
+	}
+
+	// if index is 0 even after whole loop, it means,
+	// that there are no more free inodes/data clusters
+	if (index == 0) {
+		if (address == sb.addr_bm_inodes) {
+			set_myerrno(Inode_no_inodes);
+		}
+		else if (address == sb.addr_bm_data) {
+			set_myerrno(Cluster_no_clusters);
+		}
+	}
+
+	return index;
+}
+
+
+int32_t open_new_link(struct inode* source) {
+	int ret = RETURN_FAILURE;
+	size_t i;
+	int32_t free_cluster_index = 0;
+	// links in SEQUENTIAL order
+	int32_t link_values[] = {source->direct1, source->direct2, source->direct3, source->direct4, source->direct5, source->indirect1, source->indirect2};
+
+	// check each link, in order to find first free
+	for (i = 0; i < LEN(link_values); ++i) {
+		if (link_values[i] == FREE_LINK) {
+			// TODO init link with data cluster
+			//  - first empty block from bitmap
+
+			// find free field
+			free_cluster_index = get_bitmap_empty_field(sb.addr_bm_data);
+
+			// if there is free field, use it
+			if (free_cluster_index != 0) {
+				link_values[i] = free_cluster_index; // TODO fwrite this change
+				ret = RETURN_SUCCESS;
+			}
+
+			break;
+		}
+	}
+
+	return ret;
+}
+
+
+int32_t create_inode(enum item type, int32_t parent) {
+	int ret = RETURN_FAILURE;
+	int32_t free_inode_index = 0;
+	struct inode new_inode = {0};
+
+	// TODO
+	// find free field
+	free_inode_index = get_bitmap_empty_field(sb.addr_bm_inodes);
+
+	// if there is free field, use it
+	if (free_inode_index != 0) {
+		FS_SEEK_SET(sb.addr_inodes + free_inode_index);
+		FS_READ(&new_inode, sizeof(struct inode), 1);
+
+		new_inode.item_type = type;
+
+		// TODO
+		//  if type == directory
+		//  - create data block for inode
+		//  - create . (new_inode.id_inode) and .. (parent) directories in new inode
+		//  else (it is file)
+		//  - just take data block for data
+
+		// write new updated inode
+		FS_SEEK_SET(sb.addr_inodes + free_inode_index);
+		FS_WRITE(&new_inode, sizeof(struct inode), 1);
+
+		ret = RETURN_SUCCESS;
+	}
+
+	return ret;
+}
+

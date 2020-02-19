@@ -60,7 +60,7 @@ int parse_fsname(char* fs_name, const char* arg_name) {
 
 
 int main(int argc, char const **argv) {
-    // name of filesystem given by user
+	// name of filesystem given by user
     char fs_name[STRLEN_FSNAME] = {0};
 
     // used for initialization

@@ -96,7 +96,23 @@ char* my_strerror(const enum __error err) {
             strcpy(err_str, "no such file or directory");
             break;
 
-        default:
+    	case Item_name_long:
+			strcpy(err_str, "item name too long");
+			break;
+
+    	case Inode_no_links:
+			strcpy(err_str, "no more links in item's inode available");
+			break;
+
+    	case Inode_no_inodes:
+			strcpy(err_str, "no more inodes available");
+			break;
+
+    	case Cluster_no_clusters:
+			strcpy(err_str, "no more data space available");
+			break;
+
+		default:
             strcpy(err_str, "");
     }
 

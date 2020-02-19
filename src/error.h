@@ -5,6 +5,7 @@
 
 #define __LENGTH_ERROR_STRING 64
 
+// TODO add prefix 'Err_'
 enum __error {
     No_error,
     Signal_interrupt,
@@ -25,6 +26,10 @@ enum __error {
     Item_not_file,
     Item_not_directory,
     Item_not_exists,
+    Item_name_long,
+    Inode_no_links,
+	Inode_no_inodes,
+	Cluster_no_clusters,
 };
 
 enum __error my_errno;
