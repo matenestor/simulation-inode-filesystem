@@ -17,7 +17,7 @@
 #include "../error.h"
 
 
-bool isnumeric(const char* num) {
+static bool isnumeric(const char* num) {
     bool is_num = true;
 
     for (size_t i = 0; i < strlen(num); ++i) {
@@ -30,7 +30,7 @@ bool isnumeric(const char* num) {
 }
 
 
-void get_datetime(char* datetime) {
+static void get_datetime(char* datetime) {
     time_t t;
     struct tm* tm_info;
 
@@ -42,7 +42,12 @@ void get_datetime(char* datetime) {
 }
 
 
-int is_valid_size(const char* num_str, size_t* size) {
+/******************************************************************************
+ *
+ * 	Check if given string by user before formatting is in correct format and size.
+ *
+ */
+static int is_valid_size(const char* num_str, size_t* size) {
     int ret = RETURN_FAILURE;
     long num = 0;
 
@@ -51,7 +56,7 @@ int is_valid_size(const char* num_str, size_t* size) {
         // if number in given string is not negative
         if (!isnegnum(num_str)) {
             // if number in given string is convertible to number
-            // i made this function. because i don't like C converts even '12ab' to '12'
+            // i made this function. because i don't like, that C converts even '12ab' to '12'
             if (isnumeric(num_str)) {
                 // try to convert the number
                 num = strtol(num_str, NULL, 10);
@@ -66,32 +71,32 @@ int is_valid_size(const char* num_str, size_t* size) {
                     }
                     else {
                         printf("use range from 1 MB to %d MB\n", FS_SIZE_MAX);
-                        set_myerrno(Fs_size_sim_range);
+                        set_myerrno(Err_fs_size_sim_range);
                     }
                 }
                 else {
-                    set_myerrno(Fs_size_sys_range);
+                    set_myerrno(Err_fs_size_sys_range);
                     perror("system error");
                     errno = 0;
                 }
             }
             else {
-                set_myerrno(Fs_size_nan);
+                set_myerrno(Err_fs_size_nan);
             }
         }
         else {
-            set_myerrno(Fs_size_negative);
+            set_myerrno(Err_fs_size_negative);
         }
     }
     else {
-        set_myerrno(Fs_size_none);
+        set_myerrno(Err_fs_size_none);
     }
 
     return ret;
 }
 
 
-int init_superblock(const int size, const size_t clstr_cnt) {
+static int init_superblock(const int size, const size_t clstr_cnt) {
     char datetime[DATETIME_LENGTH] = {0};
     get_datetime(datetime);
 
@@ -105,7 +110,7 @@ int init_superblock(const int size, const size_t clstr_cnt) {
     int32_t addr_dat = mb2b(size) - (clstr_cnt * FS_CLUSTER_SIZE);
 
     // init superblock variables
-    strcpy(sb.signature, SIGNATURE);
+    strncpy(sb.signature, SIGNATURE, strlen(SIGNATURE));
     sprintf(sb.volume_descriptor, "%s, made by matenestor", datetime);
     sb.disk_size = size;
     sb.cluster_size = FS_CLUSTER_SIZE;
@@ -126,18 +131,15 @@ int init_superblock(const int size, const size_t clstr_cnt) {
 }
 
 
-int init_bitmap(const size_t clstr_cnt) {
-    size_t i;
-    bool t = true;
-    bool f = false;
+static int init_bitmap(const size_t clstr_cnt) {
+    bool bitmap[clstr_cnt];
 
-    // first block is used for root directory during format
-    FS_WRITE(&f, sizeof(bool), 1);
+    // set whole bitmap to available
+    memset(bitmap, true, clstr_cnt);
+    // except for first block, it is used for root directory during format
+    bitmap[0] = false;
 
-    // write rest of bitmap of inodes to file
-    for (i = 1; i < clstr_cnt; ++i) {
-        FS_WRITE(&t, sizeof(bool), 1);
-    }
+    FS_WRITE(bitmap, sizeof(bool), clstr_cnt);
 
 	FS_FLUSH;
 
@@ -145,57 +147,68 @@ int init_bitmap(const size_t clstr_cnt) {
 }
 
 
-int init_inodes(const size_t clstr_cnt) {
+static int init_inodes(const size_t clstr_cnt) {
     size_t i;
+    // inode template
     struct inode in;
+    // array of cached inode in filesystem (inodes count == cluster count)
+    struct inode inodes[clstr_cnt];
 
     // init root inode
-    in.id_node = 0;
+    in.id_inode = 0;
     // first inode is used for root directory during format
-    in.item_type = Item_directory;
+    in.item_type = Itemtype_directory;
     // file size for directories is size of data cluster
     in.file_size = FS_CLUSTER_SIZE;
     // root inode point to data cluster on index 0
-    in.direct1 = 0;
+    in.direct[0] = 0;
     // other links are free
-    in.direct2 = FREE_LINK;
-    in.direct3 = FREE_LINK;
-    in.direct4 = FREE_LINK;
-    in.direct5 = FREE_LINK;
-    in.indirect1 = FREE_LINK;
-    in.indirect2 = FREE_LINK;
+    for (i = 1; i < COUNT_DIRECT_LINKS; ++i) {
+        in.direct[i] = FREE_LINK;
+    }
+    // set indirect links level 1
+    for (i = 0; i < COUNT_INDIRECT_LINKS_1; ++i) {
+        in.indirect1[i] = FREE_LINK;
+    }
+    // set indirect links level 2
+    for (i = 0; i < COUNT_INDIRECT_LINKS_2; ++i) {
+        in.indirect2[i] = FREE_LINK;
+    }
 
-    // write root inode to file
-    FS_WRITE(&in, sizeof(struct inode), 1);
-
-    // cache root inode
+    // cache root inode to local array for future FS_WRITE
+    memcpy(&inodes[0], &in, sizeof(struct inode));
+    // and to simulator cache
     memcpy(&in_actual, &in, sizeof(struct inode));
 
     // reset values for rest of the inodes
-    in.item_type = Item_free;
+    in.item_type = Itemtype_free;
     in.file_size = 0;
-    in.direct1 = FREE_LINK;
+    in.direct[0] = FREE_LINK;
 
-    // init rest of inodes in filesystem
+    // cache rest of inodes to local array for future FS_WRITE
     for (i = 1; i < clstr_cnt; ++i) {
-        in.id_node = i;
-        FS_WRITE(&in, sizeof(struct inode), 1);
+        in.id_inode = i;
+        memcpy(&inodes[i], &in, sizeof(struct inode));
     }
 
-	FS_FLUSH;
+    FS_WRITE(inodes, sizeof(struct inode), clstr_cnt);
+
+    FS_FLUSH;
 
 	return RETURN_SUCCESS;
 }
 
 
-int init_clusters(const size_t fs_size) {
+static int init_clusters(const size_t fs_size) {
     size_t i;
     // how much bytes is missing till end of filesystem
     size_t diff = fs_size - FS_TELL;
     // helper array to be filled from
     char zeros[CACHE_SIZE] = {0};
 
-    // note: this filling with batches is faster, than filling it one char by one
+    // note: this filling with batches is faster, than filling it one char by one,
+    //  but still batches are necessary, because size of 'zeros' array might be bigger,
+    //  than stack can handle
     // fill rest of filesystem with batches of zeros
     for (i = 0; i < diff / CACHE_SIZE; ++i) {
         FS_WRITE(zeros, sizeof(char), CACHE_SIZE);
@@ -205,18 +218,24 @@ int init_clusters(const size_t fs_size) {
 
 	FS_FLUSH;
 
-    // move fs pointer to the beginning of data clusters
+    return RETURN_SUCCESS;
+}
+
+
+static int init_root_dir() {
+    // root directory items
+    struct directory_item di[3] = {0};
+
+    // init directories in root directory (fk_id_inode is already set to 0 by init)
+    strncpy(di[0].item_name, ".", 1);
+    strncpy(di[1].item_name, "..", 2);
+    strncpy(di[2].item_name, "/", 1); // TODO necessary?
+
+    // write root directory items to file
     FS_SEEK_SET(sb.addr_data);
-    // init root directory item
-    struct directory_item di = {SEPARATOR, 0};
-    // write root directory to file
-    FS_WRITE(&di, sizeof(struct directory_item), 1);
+    FS_WRITE(&di, sizeof(struct directory_item), 3);
 
-    // init this directory in root directory and write it also
-    strcpy(di.item_name, ".");
-    FS_WRITE(&di, sizeof(struct directory_item), 1);
-
-	FS_FLUSH;
+    FS_FLUSH;
 
     return RETURN_SUCCESS;
 }
@@ -247,11 +266,8 @@ int format_(const char* fs_size_str, const char* path) {
             init_inodes(clstr_cnt);
             // data clusters
             init_clusters(mb2b(fs_size));
-
-            // TODO create root folder / with mkdir, not manually
-
-            // move fs pointer (hdd head) to the beginning
-            FS_SEEK_SET(0);
+            // root directory
+            init_root_dir();
 
             log_info("Filesystem [%s] with size [%d] formatted.", path, fs_size);
             printf("format: filesystem formatted, size: %zu MB\n", fs_size);
@@ -270,7 +286,7 @@ int format_(const char* fs_size_str, const char* path) {
     }
 
     if (ret == RETURN_FAILURE) {
-        set_myerrno(Fs_not_formatted);
+        set_myerrno(Err_fs_not_formatted);
     }
 
     return ret;

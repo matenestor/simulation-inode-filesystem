@@ -85,25 +85,23 @@ FILE* FS_VARIABLE_NAME;
 struct superblock sb = {0};
 /** Inode, where user currently is. */
 struct inode in_actual = {0};
-/** Inode used for commands -- cp, mv, incp, outcp. */
-struct inode in_distant = {0};
 
-extern int cp_(char*, char*);
-extern int mv_(char*, char*);
-extern int rm_(char*);
-extern int mkdir_(char*);
-extern int rmdir_(char*);
-extern int ls_(char*);
-extern int cat_(char*);
-extern int cd_(char*);
+extern int cp_(const char*, const char*);
+extern int mv_(const char*, const char*);
+extern int rm_(const char*);
+extern int mkdir_(const char*);
+extern int rmdir_(const char*);
+extern int ls_(const char*);
+extern int cat_(const char*);
+extern int cd_(const char*);
 extern int pwd_();
-extern int info_(char*);
-extern int incp_(char*, char*);
-extern int outcp_(char*, char*);
-extern int load_(char*);
+extern int info_(const char*);
+extern int incp_(const char*, const char*);
+extern int outcp_(const char*, const char*);
+extern int load_(const char*);
 extern int format_(const char*, const char*);
 extern int fsck_();
-extern int tree_(char*);
+extern int tree_(const char*);
 
 
 #endif

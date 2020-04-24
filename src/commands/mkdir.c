@@ -2,111 +2,101 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../fs_operations.h"
+#include "../utils.h"
 #include "../inc/fs_cache.h"
 #include "../inc/inode.h"
 #include "../inc/return_codes.h"
-#include "../fs_operations.h"
 
 #include "../error.h"
 
 
-int mkdir_(char* path) {
+/******************************************************************************
+ *
+ * 	Check if making new directory is possible by reading parent of the directory
+ * 	and then trying to read inode with name of the directory.
+ *
+ */
+static bool is_mkdir_possible(const char* path, const char* path_parent) {
+    bool is_creatable = false;
+    struct inode tmp = {0};
+
+    // path to destination inode exists
+    if (get_inode_by_path(&tmp, path_parent) != RETURN_FAILURE) {
+        // no directory with same name as new being created exists
+        if (get_inode_by_path(&tmp, path) == RETURN_FAILURE) {
+            is_creatable = true;
+        }
+        else {
+            set_myerrno(Err_dir_exists);
+        }
+    }
+
+    return is_creatable;
+}
+
+
+int mkdir_(const char* path) {
     int ret = RETURN_FAILURE;
-	int32_t id_inode_parent = -1;
-	int32_t id_inode_child = -1;
-	int32_t id_cluster = -1;
-	size_t items = 0;
-	struct directory_item dirs[sb.count_dir_items];
-	struct directory_item new_dir;
 
-	const size_t path_length = strlen(path);
-	char path_copy[path_length];
-	char name[STRLEN_ITEM_NAME] = {0};
+    // count of records in cluster read
+    size_t items = 0;
+    // name of new directory
+    char dir_name[STRLEN_ITEM_NAME] = {0};
+    // path to parent of new directory, if any
+    char path_parent[strlen(path) + 1];
+    // id of cluster, where record of new directory will be stored
+    int32_t id_cluster = RETURN_FAILURE;
+    // parent of directory being created
+    struct inode in_parent = {0};
+    // inode of new directory
+    struct inode in_new_dir = {0};
+    // struct of new directory
+    struct directory_item new_dir;
+    // cluster of directory records, where the new record will be stored
+    struct directory_item dirs[sb.count_dir_items];
 
-	// copy path -- there are two tokenizing here
-	strncpy(path_copy, path, path_length);
+    // separate path to parent directory from new directory name
+    parse_parent_path(path_parent, path);
 
-    // TODO
-    //  - X! get destination inode
-    //  - X check last nonempty link in inode
-    //  - X check if in link's cluster is still space for another directory item
-    //    - cREATE_INODE yes, mkdir -> get first free inode
-    //    - X no, use another link in inode[1], mkdir
-
-    // TODO [1]
-    //  - X check if there is available link in inode (lvl1, lvl2, lvl3 link)
-    //  - OPEN_NEW_LINK check if there is available data cluster
-
-    if (path_length > 0) {
+    if (strlen(path) > 0) {
 		// get name -- last element in path
-		if (get_name(name, path_copy) != RETURN_FAILURE) {
-			// copy path string again, because the copy was destroyed in get_name(...) by strtok
-			strncpy(path_copy, path, path_length);
+		if (parse_name(dir_name, path, STRLEN_ITEM_NAME) != RETURN_FAILURE) {
+            // check if it is possible to make new directory
+            if (is_mkdir_possible(path, path_parent)) {
+                // get parent inode, where new directory should be created in
+                if (get_inode_by_path(&in_parent, path_parent) != RETURN_FAILURE) {
+                    // get link to cluster in parent, where new directory will be written to
+                    if ((id_cluster = get_link(&in_parent)) != RETURN_FAILURE) {
+                        // create inode for new directory record
+                        if (create_inode(&in_new_dir, Itemtype_directory, in_parent.id_inode) != RETURN_FAILURE) {
+                            // cache cluster where the record of new directory will be stored
+                            FS_SEEK_SET(sb.addr_data + id_cluster * sb.count_dir_items * sizeof(struct directory_item));
+                            FS_READ(dirs, sizeof(struct directory_item), sb.count_dir_items);
+                            items = get_count_dirs(dirs);
 
-			// get inode, where the new directory should be created in
-			id_inode_parent = get_inodeid_by_path(path_copy);
+                            // init new directory
+                            strncpy(new_dir.item_name, dir_name, strlen(dir_name) + 1);
+                            new_dir.fk_id_inode = in_new_dir.id_inode;
 
-			if (id_inode_parent != RETURN_FAILURE) {
-				// inode of last element in path gained
-				FS_SEEK_SET(sb.addr_inodes + id_inode_parent);
-				FS_READ(&in_distant, sizeof(struct inode), 1);
+                            // insert new dir to the cluster
+                            dirs[items] = new_dir;
 
-				// last nonempty link in inode, always will get something,
-				// because 'id_inode_parent' in this place is not FREE_LINK
-				id_cluster = get_last_link_value(&in_distant);
+                            // write updated cluster
+                            FS_SEEK_SET(sb.addr_data + id_cluster * sb.count_dir_items * sizeof(struct directory_item));
+                            FS_WRITE(dirs, sizeof(struct directory_item), items + 1);
 
-				// read cluster, where the link points
-				FS_SEEK_SET(sb.addr_data + id_cluster);
-				items = FS_READ(dirs, sizeof(struct directory_item), sb.count_dir_items);
+                            FS_FLUSH;
 
-				// the link points to full cluster -- open new link
-				if (items == sb.count_dir_items) {
-					id_cluster = open_new_link(&in_distant);
-					items = 0;
-				}
-
-				// check if new link was opened
-				// (it fails, when all links in indirect2 link are taken)
-				if (id_cluster != RETURN_FAILURE) {
-					// create inode for new directory record
-					id_inode_child = create_inode(Item_directory, id_inode_parent);
-
-					if (id_inode_child != RETURN_FAILURE) {
-						// create a record of new directory
-						strncpy(name, new_dir.item_name, STRLEN_ITEM_NAME);
-						new_dir.fk_id_node = id_inode_child;
-						memcpy(&dirs[items], &new_dir, sizeof(struct directory_item));
-
-						// go back to start of cluster and write new directory record
-						FS_SEEK_SET(sb.addr_data + id_cluster);
-						FS_WRITE(dirs, sizeof(struct directory_item), items + 1);
-
-						FS_FLUSH;
-
-						ret = RETURN_SUCCESS;
-					}
-					else {
-						my_perror("mkdir");
-						reset_myerrno();
-					}
-				}
-				else {
-					my_perror("mkdir");
-					reset_myerrno();
-				}
-			}
-			else {
-				my_perror("mkdir");
-				reset_myerrno();
-			}
-		}
-		else {
-			my_perror("mkdir");
-			reset_myerrno();
+                            ret = RETURN_SUCCESS;
+                        }
+                    }
+                }
+            }
 		}
     }
     else {
-        set_myerrno(Arg_missing_operand);
+        set_myerrno(Err_arg_missing_operand);
     }
 
     return ret;

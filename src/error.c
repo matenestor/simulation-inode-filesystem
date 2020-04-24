@@ -7,7 +7,7 @@
 
 
 void reset_myerrno() {
-    my_errno = No_error;
+    my_errno = Err_no_error;
 }
 
 
@@ -20,97 +20,105 @@ char* my_strerror(const enum __error err) {
     static char err_str[__LENGTH_ERROR_STRING];
 
     switch (err) {
-        case No_error:
+        case Err_no_error:
             strcpy(err_str, "no error");
             break;
 
-        case Signal_interrupt:
+        case Err_signal_interrupt:
             strcpy(err_str, "signal interrupt");
             break;
 
-        case Fs_name_missing:
+        case Err_fs_name_missing:
             strcpy(err_str, "filesystem name not provided");
             break;
 
-        case Fs_name_long:
+        case Err_fs_name_long:
             strcpy(err_str, "filesystem name too long");
             break;
 
-        case Fs_name_invalid:
+        case Err_fs_name_invalid:
             strcpy(err_str, "filesystem name invalid");
             break;
 
-        case Fs_not_loaded:
+        case Err_fs_not_loaded:
             strcpy(err_str, "unable to load filesystem");
             break;
 
-        case Fs_not_formatted:
+        case Err_fs_not_formatted:
             strcpy(err_str, "unable to format filesystem");
             break;
 
-        case Fs_size_sim_range:
+        case Err_fs_size_sim_range:
             strcpy(err_str, "filesystem size not in simulation range");
             break;
 
-        case Fs_size_sys_range:
+        case Err_fs_size_sys_range:
             strcpy(err_str, "filesystem size not in system range");
             break;
 
-        case Fs_size_nan:
+        case Err_fs_size_nan:
             strcpy(err_str, "filesystem size not a number");
             break;
 
-        case Fs_size_negative:
+        case Err_fs_size_negative:
             strcpy(err_str, "filesystem size negative");
             break;
 
-        case Fs_size_none:
+        case Err_fs_size_none:
             strcpy(err_str, "filesystem size not provided");
             break;
 
-        case Arg_missing_operand:
+        case Err_arg_missing_operand:
             strcpy(err_str, "missing operand");
             break;
 
-        case Arg_missing_destination:
+        case Err_arg_missing_destination:
             strcpy(err_str, "missing destination file operand");
             break;
 
-        case Dir_not_empty:
+        case Err_dir_not_empty:
             strcpy(err_str, "directory not empty");
             break;
 
-        case Dir_exists:
+        case Err_dir_exists:
             strcpy(err_str, "file exists");
             break;
 
-        case Item_not_file:
+        case Err_item_not_file:
             strcpy(err_str, "is a directory");
             break;
 
-        case Item_not_directory:
+        case Err_item_not_directory:
             strcpy(err_str, "not a directory");
             break;
 
-        case Item_not_exists:
+        case Err_item_not_exists:
             strcpy(err_str, "no such file or directory");
             break;
 
-    	case Item_name_long:
+    	case Err_item_name_long:
 			strcpy(err_str, "item name too long");
 			break;
 
-    	case Inode_no_links:
-			strcpy(err_str, "no more links in item's inode available");
-			break;
-
-    	case Inode_no_inodes:
+		case Err_inode_no_inodes:
 			strcpy(err_str, "no more inodes available");
 			break;
 
-    	case Cluster_no_clusters:
+    	case Err_inode_no_links:
+			strcpy(err_str, "no more links in inode available");
+			break;
+
+    	case Err_cluster_no_clusters:
 			strcpy(err_str, "no more data space available");
 			break;
+
+    	case Err_cluster_full:
+			strcpy(err_str, "cluster is full");
+			break;
+
+        case Err_fs_error:
+            strcpy(err_str, "Filesystem internal error.");
+            break;
 
 		default:
             strcpy(err_str, "");
@@ -138,5 +146,5 @@ void my_exit() {
 
 
 bool is_error() {
-    return my_errno != No_error;
+    return my_errno != Err_no_error;
 }

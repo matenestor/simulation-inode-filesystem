@@ -16,6 +16,10 @@ add_executable(KIV_ZOS_sp
 
         src/main.c src/main.h
         src/simulator.c src/simulator.h
+        src/fs_operations.c
+        src/utils.c src/utils.h
 
         src/commands/format.c src/commands/format.h
-        src/commands/mkdir.c src/fs_operations.c)
+        src/commands/ls.c
+        src/commands/mkdir.c
+        )

@@ -14,7 +14,7 @@
 
 void signal_handler(int signum) {
     close_filesystem();
-    set_myerrno(Signal_interrupt);
+    set_myerrno(Err_signal_interrupt);
     my_exit();
 }
 
@@ -41,7 +41,7 @@ int parse_fsname(char* fs_name, const char* arg_name) {
             // not valid if char is not letter, number or underscore
             if (!(isalnum(arg_name[i]) || isunscr(arg_name[i]) || isdot(arg_name[i]))) {
                 fputs("Use only letters, numbers, dots and/or underscores!\n", stderr);
-                set_myerrno(Fs_name_invalid);
+                set_myerrno(Err_fs_name_invalid);
                 ret = RETURN_FAILURE;
             }
         }
@@ -51,7 +51,7 @@ int parse_fsname(char* fs_name, const char* arg_name) {
     }
     else {
         fputs("Maximal length on name is 31 characters!\n", stderr);
-        set_myerrno(Fs_name_long);
+        set_myerrno(Err_fs_name_long);
         ret = RETURN_FAILURE;
     }
 
@@ -60,7 +60,7 @@ int parse_fsname(char* fs_name, const char* arg_name) {
 
 
 int main(int argc, char const **argv) {
-	// name of filesystem given by user
+    // name of filesystem given by user
     char fs_name[STRLEN_FSNAME] = {0};
 
     // used for initialization
@@ -80,7 +80,7 @@ int main(int argc, char const **argv) {
     }
     // if no name was provided, set my_errno
     else {
-        set_myerrno(Fs_name_missing);
+        set_myerrno(Err_fs_name_missing);
     }
 
     // if name is ok, load and run

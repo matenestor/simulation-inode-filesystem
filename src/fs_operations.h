@@ -16,12 +16,10 @@
 #define FS_SEEK_CUR(offset)           fseek(FS_VARIABLE_NAME, offset, SEEK_CUR)
 #define FS_FLUSH					  fflush(FS_VARIABLE_NAME)
 
-#define LEN(array) 					  (sizeof(array) / sizeof(array[0]))
+int32_t get_inode_by_path(struct inode*, const char*);
+int32_t create_inode(struct inode*, enum item, int32_t);
 
-int32_t get_inodeid_by_path(char* path);
-int get_name(char*, char*);
-int32_t get_last_link_value(const struct inode*);
-int32_t open_new_link(struct inode*);
-int32_t create_inode(enum item, int32_t);
+//int32_t get_last_link_value(const struct inode*);
+int32_t get_link(struct inode*);
 
 #endif

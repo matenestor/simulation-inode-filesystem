@@ -17,6 +17,12 @@ void close_filesystem() {
 }
 
 
+/******************************************************************************
+ *
+ * 	Load a file with filesystem, if it exists. Read superblock and first inode.
+ * 	If filesystem with given name does not exists, tell user about possible formatting.
+ *
+ */
 int load(const char* fsn) {
     int ret = RETURN_SUCCESS;
 
@@ -48,7 +54,7 @@ int load(const char* fsn) {
         }
         // filesystem is ready to be loaded, but there was an error
         else {
-            set_myerrno(Fs_not_loaded);
+            set_myerrno(Err_fs_not_loaded);
             ret = RETURN_FAILURE;
         }
     }
@@ -144,7 +150,10 @@ void run() {
             }
 
             else if (strcmp(command, CMD_LS) == 0) {
-                ls_(arg1);
+                if (ls_(arg1) == RETURN_FAILURE) {
+                    my_perror("ls");
+                    reset_myerrno();
+                }
             }
 
             else if (strcmp(command, CMD_CAT) == 0) {
@@ -224,43 +233,37 @@ void run() {
 
 
 
-int cp_(char* arg1, char* arg2) {
+int cp_(const char* arg1, const char* arg2) {
     int ret = RETURN_FAILURE;
     return ret;
 }
 
 
-int mv_(char* arg1, char* arg2) {
+int mv_(const char* arg1, const char* arg2) {
     int ret = RETURN_FAILURE;
     return ret;
 }
 
 
-int rm_(char* arg1) {
+int rm_(const char* arg1) {
     int ret = RETURN_FAILURE;
     return ret;
 }
 
 
-int rmdir_(char* arg1) {
+int rmdir_(const char* arg1) {
     int ret = RETURN_FAILURE;
     return ret;
 }
 
 
-int ls_(char* arg1) {
+int cat_(const char* arg1) {
     int ret = RETURN_FAILURE;
     return ret;
 }
 
 
-int cat_(char* arg1) {
-    int ret = RETURN_FAILURE;
-    return ret;
-}
-
-
-int cd_(char* arg1) {
+int cd_(const char* arg1) {
     int ret = RETURN_FAILURE;
     return ret;
 }
@@ -272,25 +275,25 @@ int pwd_() {
 }
 
 
-int info_(char* arg1) {
+int info_(const char* arg1) {
     int ret = RETURN_FAILURE;
     return ret;
 }
 
 
-int incp_(char* arg1, char* arg2) {
+int incp_(const char* arg1, const char* arg2) {
     int ret = RETURN_FAILURE;
     return ret;
 }
 
 
-int outcp_(char* arg1, char* arg2) {
+int outcp_(const char* arg1, const char* arg2) {
     int ret = RETURN_FAILURE;
     return ret;
 }
 
 
-int load_(char* arg1) {
+int load_(const char* arg1) {
     int ret = RETURN_FAILURE;
     return ret;
 }
@@ -302,7 +305,7 @@ int fsck_() {
 }
 
 
-int tree_(char* arg1) {
+int tree_(const char* arg1) {
     int ret = RETURN_FAILURE;
     return ret;
 }

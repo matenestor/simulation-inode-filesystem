@@ -12,7 +12,6 @@
 extern FILE* FS_VARIABLE_NAME;
 extern struct superblock sb;
 extern struct inode in_actual;
-extern struct inode in_distant;
 
 
 #endif
