@@ -261,7 +261,7 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
     // id of new cluster, which will be used for the inode
 	int32_t id_free_cluster = RETURN_FAILURE;
 	// directory item record, in case new inode is for directory
-	struct directory_item new_dir_item[2];
+	struct directory_item new_dir_item[2] = {0};
 
 	// find free field for inode, which is also id of the inode
 	id_free_inode = get_empty_bitmap_field(sb.addr_bm_inodes);
@@ -299,7 +299,7 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
 		}
 
 		// write new updated inode
-		FS_SEEK_SET(sb.addr_inodes + id_free_inode * sb.count_dir_items * sizeof(struct directory_item));
+		FS_SEEK_SET(sb.addr_inodes + id_free_inode * sizeof(struct inode));
 		FS_WRITE(new_inode, sizeof(struct inode), 1);
 
 		FS_FLUSH;

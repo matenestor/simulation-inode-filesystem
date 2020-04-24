@@ -15,7 +15,7 @@ static int list_direct_links(const int32_t* links) {
     size_t i, j;
     size_t items = 0;
     // cache inode for determination of file/directory
-    struct inode in_tmp;
+    struct inode in_ls;
     // cluster of item records to be printed
     struct directory_item cluster[sb.count_dir_items];
 
@@ -29,12 +29,12 @@ static int list_direct_links(const int32_t* links) {
             // print names of records (directory + files)
             for (j = 0; j < items; ++j) {
                 FS_SEEK_SET(sb.addr_inodes + cluster[j].fk_id_inode * sizeof(struct inode));
-                FS_READ(&in_tmp, sizeof(struct inode), 1);
+                FS_READ(&in_ls, sizeof(struct inode), 1);
 
-                if (in_tmp.item_type == Itemtype_directory) {
+                if (in_ls.item_type == Itemtype_directory) {
                     printf("d %s/\n", cluster[j].item_name);
                 }
-                else if (in_tmp.item_type == Itemtype_file) {
+                else if (in_ls.item_type == Itemtype_file) {
                     printf("- %s\n", cluster[j].item_name);
                 }
             }

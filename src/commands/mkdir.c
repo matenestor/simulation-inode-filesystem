@@ -51,8 +51,8 @@ int mkdir_(const char* path) {
     struct inode in_parent = {0};
     // inode of new directory
     struct inode in_new_dir = {0};
-    // struct of new directory
-    struct directory_item new_dir;
+    // struct of new directory, which will be put to cluster
+    struct directory_item new_dir = {0};
     // cluster of directory records, where the new record will be stored
     struct directory_item dirs[sb.count_dir_items];
 
