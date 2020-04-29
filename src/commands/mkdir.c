@@ -71,8 +71,8 @@ int mkdir_(const char* path) {
                         // create inode for new directory record
                         if (create_inode(&in_new_dir, Itemtype_directory, in_parent.id_inode) != RETURN_FAILURE) {
                             // cache cluster where the record of new directory will be stored
-                            FS_SEEK_SET(sb.addr_data + id_cluster * sb.count_dir_items * sizeof(struct directory_item));
-                            FS_READ(dirs, sizeof(struct directory_item), sb.count_dir_items);
+                            fs_seek_set(sb.addr_data + id_cluster * sb.count_dir_items * sizeof(struct directory_item));
+                            fs_read_directory_item(dirs, sizeof(struct directory_item), sb.count_dir_items);
                             items = get_count_dirs(dirs);
 
                             // init new directory
@@ -83,10 +83,10 @@ int mkdir_(const char* path) {
                             dirs[items] = new_dir;
 
                             // write updated cluster
-                            FS_SEEK_SET(sb.addr_data + id_cluster * sb.count_dir_items * sizeof(struct directory_item));
-                            FS_WRITE(dirs, sizeof(struct directory_item), items + 1);
+                            fs_seek_set(sb.addr_data + id_cluster * sb.count_dir_items * sizeof(struct directory_item));
+                            fs_write_directory_item(dirs, sizeof(struct directory_item), items + 1);
 
-                            FS_FLUSH;
+                            fs_flush();
 
                             ret = RETURN_SUCCESS;
                         }

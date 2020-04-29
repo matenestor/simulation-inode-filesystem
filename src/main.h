@@ -1,6 +1,10 @@
 #ifndef MAIN_H
 #define MAIN_H
 
+#include <stdbool.h>
+
+
+#define DEBUG 1
 
 #define PR_INTRO " _____________________________________________\n" \
                  "|                                             |\n" \
@@ -10,12 +14,14 @@
 
 #define PR_HELP  "Usage: inodes <filesystem-name>\n"
 
-#define isunscr(c) ((c)==('_'))
-#define isdot(c)   ((c)==('.'))
+#define isunscr(c)   ((c)==('_'))
+#define isdot(c)     ((c)==('.'))
+#define isslash(c)   ((c)==('/'))
 
-extern int load(const char*);
-extern void run();
+/** Simulation running status for signal handler. */
+extern bool is_running;
+
+extern int init_simulation(const char*);
 extern void close_filesystem();
-
 
 #endif

@@ -1,14 +1,137 @@
 #include <stdbool.h>
 #include <string.h>
+#include <unistd.h>
 
-#include "fs_operations.h"
-#include "utils.h"
 #include "inc/fs_cache.h"
+#include "inc/fs_prompt.h"
 #include "inc/inode.h"
 #include "inc/return_codes.h"
+#include "utils.h"
 
-#include "error.h"
 #include "inc/logger_api.h"
+#include "error.h"
+
+
+// ================================================================================================
+
+void fs_seek_set(const unsigned int offset) {
+    fseek(filesystem, (long) offset, SEEK_SET);
+}
+
+long int fs_tell() {
+    return ftell(filesystem);
+}
+
+void fs_flush() {
+    fflush(filesystem);
+}
+
+unsigned int fs_read_superblock(struct superblock* buffer, const size_t size, const size_t count) {
+    return fread(buffer, size, count, filesystem);
+}
+
+unsigned int fs_read_inode(struct inode* buffer, const size_t size, const size_t count) {
+    return fread(buffer, size, count, filesystem);
+}
+
+unsigned int fs_read_directory_item(struct directory_item* buffer, const size_t size, const size_t count) {
+    return fread(buffer, size, count, filesystem);
+}
+
+unsigned int fs_read_int32t(int32_t* buffer, const size_t size, const size_t count) {
+    return fread(buffer, size, count, filesystem);
+}
+
+unsigned int fs_read_bool(bool* buffer, const size_t size, const size_t count) {
+    return fread(buffer, size, count, filesystem);
+}
+
+unsigned int fs_read_char(char* buffer, const size_t size, const size_t count) {
+    return fread(buffer, size, count, filesystem);
+}
+
+unsigned int fs_write_superblock(const struct superblock* buffer, const size_t size, const size_t count) {
+    return fwrite(buffer, size, count, filesystem);
+}
+
+unsigned int fs_write_inode(const struct inode* buffer, const size_t size, const size_t count) {
+    return fwrite(buffer, size, count, filesystem);
+}
+
+unsigned int fs_write_directory_item(const struct directory_item* buffer, const size_t size, const size_t count) {
+    return fwrite(buffer, size, count, filesystem);
+}
+
+unsigned int fs_write_int32t(const int32_t* buffer, const size_t size, const size_t count) {
+    return fwrite(buffer, size, count, filesystem);
+}
+
+unsigned int fs_write_bool(const bool* buffer, const size_t size, const size_t count) {
+    return fwrite(buffer, size, count, filesystem);
+}
+
+unsigned int fs_write_char(const char* buffer, const size_t size, const size_t count) {
+    return fwrite(buffer, size, count, filesystem);
+}
+
+// ================================================================================================
+
+
+/******************************************************************************
+ *
+ * 	Load a file with filesystem, if it exists. Read superblock and first inode.
+ * 	If filesystem with given name does not exists, tell user about possible formatting.
+ *
+ */
+int init_filesystem(const char* fsn) {
+    int ret = RETURN_FAILURE;
+
+    log_info("Loading filesystem with name [%s].", fsn);
+
+    // if filesystem exists, load it
+    if (access(fsn, F_OK) == 0) {
+        // filesystem is ready to be loaded
+        if ((filesystem = fopen(fsn, "rb+")) != NULL) {
+            // cache super block
+            fs_read_superblock(&sb, sizeof(struct superblock), 1);
+            // move to inodes location
+            fs_seek_set(sb.addr_inodes);
+            // cache root inode
+            fs_read_inode(&in_actual, sizeof(struct inode), 1);
+
+            puts("Filesystem loaded successfully.");
+            ret = RETURN_SUCCESS;
+
+            log_info("Filesystem [%s] loaded.", fsn);
+        }
+            // filesystem is ready to be loaded, but there was an error
+        else {
+            set_myerrno(Err_fs_not_loaded);
+        }
+    }
+        // else notify about possible formatting
+    else {
+        puts("No filesystem with this name found. You can format one with command 'format <size>'.");
+        ret = RETURN_SUCCESS;
+
+        log_info("Filesystem [%s] not found.", fsn);
+    }
+
+    return ret;
+}
+
+
+/******************************************************************************
+ *
+ * 	Close filesystem binary file.
+ *
+ */
+void close_filesystem() {
+    if (filesystem != NULL) {
+        fclose(filesystem);
+        log_info("Filesystem closed.");
+    }
+}
 
 
 /******************************************************************************
@@ -33,8 +156,8 @@ static int32_t get_item_by_name(const char* name, const int32_t* links, const si
         }
 
         // try to read maximum count in cluster -- only successful count of read elements is assigned
-        FS_SEEK_SET(sb.addr_data + links[i] * sb.count_dir_items * sizeof(struct directory_item));
-        FS_READ(cluster, sizeof(struct directory_item), sb.count_dir_items);
+        fs_seek_set(sb.addr_data + links[i] * sb.count_dir_items * sizeof(struct directory_item));
+        fs_read_directory_item(cluster, sizeof(struct directory_item), sb.count_dir_items);
         items = get_count_dirs(cluster);
 
         // loop over existing directory items
@@ -80,8 +203,8 @@ static int32_t get_inodeid_by_name(const struct inode* source, const char* name)
     // note: if count of indirect links lvl 1 needs to be bigger than 1 in future, this `if` is needed to be in loop
     if (source->indirect1[0] != FREE_LINK && id == RETURN_FAILURE) {
         // read whole cluster with 1st level indirect links to clusters with data
-        FS_SEEK_SET(sb.addr_data + source->indirect1[0] * sb.count_links * sizeof(int32_t));
-        FS_READ(clstr_direct, sizeof(int32_t), sb.count_links);
+        fs_seek_set(sb.addr_data + source->indirect1[0] * sb.count_links * sizeof(int32_t));
+        fs_read_int32t(clstr_direct, sizeof(int32_t), sb.count_links);
         links = get_count_links(clstr_direct);
 
         id = get_item_by_name(name, clstr_direct, links);
@@ -91,14 +214,14 @@ static int32_t get_inodeid_by_name(const struct inode* source, const char* name)
     // note: if count of indirect links lvl 2 needs to be bigger than 1 in future, this `if` is needed to be in loop
     if (source->indirect2[0] != FREE_LINK && id == RETURN_FAILURE) {
         // read whole cluster with 2nd level indirect links to clusters with 1st level indirect links
-        FS_SEEK_SET(sb.addr_data + source->indirect2[0] * sb.count_links * sizeof(int32_t));
-        FS_READ(clstr_indirect, sizeof(int32_t), sb.count_links);
+        fs_seek_set(sb.addr_data + source->indirect2[0] * sb.count_links * sizeof(int32_t));
+        fs_read_int32t(clstr_indirect, sizeof(int32_t), sb.count_links);
         links = get_count_links(clstr_indirect);
 
         // loop over each 2nd level indirect link to get clusters with 1st level indirect links
         for (i = 0; i < links; ++i) {
-            FS_SEEK_SET(sb.addr_data + clstr_indirect[i] * sb.count_links * sizeof(int32_t));
-            FS_READ(clstr_direct, sizeof(int32_t), sb.count_links);
+            fs_seek_set(sb.addr_data + clstr_indirect[i] * sb.count_links * sizeof(int32_t));
+            fs_read_int32t(clstr_direct, sizeof(int32_t), sb.count_links);
             links = get_count_links(clstr_direct);
 
             id = get_item_by_name(name, clstr_direct, links);
@@ -132,13 +255,13 @@ int32_t get_inode_by_path(struct inode* in_dest, const char* path) {
 
     // track path from root
     if (path_copy[0] == SEPARATOR[0]) {
-        FS_SEEK_SET(sb.addr_inodes);
-        FS_READ(in_dest, sizeof(struct inode), 1);
+        fs_seek_set(sb.addr_inodes);
+        fs_read_inode(in_dest, sizeof(struct inode), 1);
     }
     // track path from actual directory
     else {
-        FS_SEEK_SET(sb.addr_inodes + sizeof(struct inode) * in_actual.id_inode);
-        FS_READ(in_dest, sizeof(struct inode), 1);
+        fs_seek_set(sb.addr_inodes + sizeof(struct inode) * in_actual.id_inode);
+        fs_read_inode(in_dest, sizeof(struct inode), 1);
     }
 
     id = in_dest->id_inode;
@@ -158,8 +281,8 @@ int32_t get_inode_by_path(struct inode* in_dest, const char* path) {
         }
             // still some elements to parse -- continue
         else {
-            FS_SEEK_SET(sb.addr_inodes + id * sizeof(struct inode));
-            FS_READ(in_dest, sizeof(struct inode), 1);
+            fs_seek_set(sb.addr_inodes + id * sizeof(struct inode));
+            fs_read_inode(in_dest, sizeof(struct inode), 1);
         }
 
         dir = strtok(NULL, SEPARATOR);
@@ -171,19 +294,19 @@ int32_t get_inode_by_path(struct inode* in_dest, const char* path) {
 
 static void bitmap_field_off(const int32_t address, const int32_t index) {
 	bool f = false;
-	FS_SEEK_SET(address + index);
-	FS_WRITE(&f, sizeof(bool), 1);
+	fs_seek_set(address + index);
+	fs_write_bool(&f, sizeof(bool), 1);
 
-	FS_FLUSH;
+	fs_flush();
 }
 
 
 static void bitmap_field_on(const int32_t address, const int32_t index) {
 	bool t = true;
-	FS_SEEK_SET(address + index);
-	FS_WRITE(&t, sizeof(bool), 1);
+	fs_seek_set(address + index);
+	fs_write_bool(&t, sizeof(bool), 1);
 
-	FS_FLUSH;
+	fs_flush();
 }
 
 
@@ -201,8 +324,9 @@ static int32_t get_empty_bitmap_field(const int32_t address) {
 
 	for (i = 0; i < sb.cluster_count; i += CACHE_SIZE) {
 		// cache part of bitmap
-		FS_SEEK_SET(address + i);
-		items = FS_READ(bitmap, sizeof(bool), CACHE_SIZE);
+		fs_seek_set(address + i);
+        // TODO cant read with size CACHE_SIZE, when there is less fields than that
+		items = fs_read_bool(bitmap, sizeof(bool), CACHE_SIZE);
 
 		// check cached array for a free field
 		for (j = 0; j < items; ++j) {
@@ -218,6 +342,8 @@ static int32_t get_empty_bitmap_field(const int32_t address) {
 		// if free field was found, break
 		if (index != RETURN_FAILURE) {
 			log_info("Free cluster, type: [%s], index: [%d].", address == sb.addr_bm_inodes ? "inodes" : "data", index);
+
+			// TODO bitmap_field_off here
 
 			break;
 		}
@@ -274,8 +400,8 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
 		bitmap_field_off(sb.addr_bm_data, id_free_cluster);
 
 		// cache the free inode, in order to init it
-		FS_SEEK_SET(sb.addr_inodes + id_free_inode * sizeof(struct inode));
-		FS_READ(new_inode, sizeof(struct inode), 1);
+		fs_seek_set(sb.addr_inodes + id_free_inode * sizeof(struct inode));
+		fs_read_inode(new_inode, sizeof(struct inode), 1);
 
 		// init new inode
 		new_inode->item_type = type;
@@ -292,17 +418,17 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
             strcpy(new_dir_item[1].item_name, "..");
             new_dir_item[1].fk_id_inode = id_parent;
 
-            FS_SEEK_SET(sb.addr_data + id_free_cluster * sb.count_dir_items * sizeof(struct directory_item));
-            FS_WRITE(&new_dir_item, sizeof(struct directory_item), 2);
+            fs_seek_set(sb.addr_data + id_free_cluster * sb.count_dir_items * sizeof(struct directory_item));
+            fs_write_directory_item(new_dir_item, sizeof(struct directory_item), 2);
 
-			FS_FLUSH;
+			fs_flush();
 		}
 
 		// write new updated inode
-		FS_SEEK_SET(sb.addr_inodes + id_free_inode * sizeof(struct inode));
-		FS_WRITE(new_inode, sizeof(struct inode), 1);
+		fs_seek_set(sb.addr_inodes + id_free_inode * sizeof(struct inode));
+		fs_write_inode(new_inode, sizeof(struct inode), 1);
 
-		FS_FLUSH;
+		fs_flush();
 
 		ret = id_free_inode;
 
@@ -356,10 +482,10 @@ static int32_t _init_cluster(int32_t address) {
 		cluster[0] = free_index;
 
         // write initialized cluster
-        FS_SEEK_SET(sb.addr_data + address * sb.count_links * sizeof(int32_t));
-        FS_WRITE(cluster, sizeof(int32_t), sb.count_links);
+        fs_seek_set(sb.addr_data + address * sb.count_links * sizeof(int32_t));
+        fs_write_int32t(cluster, sizeof(int32_t), sb.count_links);
 
-        FS_FLUSH;
+        fs_flush();
 	}
 
 	return free_index;
@@ -372,16 +498,16 @@ static int32_t _init_cluster(int32_t address) {
  *
  */
 static int32_t _clear_cluster(int32_t address) {
-    int32_t cluster[sb.count_links];
+    char cluster[sb.cluster_size];
 
     // clear the cluster
-    memset(cluster, '\0', sb.count_links);
+    memset(cluster, '\0', sb.cluster_size);
 
     // write initialized cluster
-    FS_SEEK_SET(sb.addr_data + address * sb.cluster_size * sizeof(char));
-    FS_WRITE(cluster, sizeof(char), sb.cluster_size);
+    fs_seek_set(sb.addr_data + address * sb.cluster_size * sizeof(char));
+    fs_write_char(cluster, sizeof(char), sb.cluster_size);
 
-    FS_FLUSH;
+    fs_flush();
 
     return 0;
 }
@@ -479,8 +605,8 @@ static bool is_cluster_full_dirs(const int32_t id_cluster) {
     size_t items = 0;
     struct directory_item cluster[sb.count_dir_items];
 
-    FS_SEEK_SET(sb.addr_data + id_cluster * sb.count_dir_items * sizeof(struct directory_item));
-    FS_READ(cluster, sizeof(struct directory_item), sb.count_dir_items);
+    fs_seek_set(sb.addr_data + id_cluster * sb.count_dir_items * sizeof(struct directory_item));
+    fs_read_directory_item(cluster, sizeof(struct directory_item), sb.count_dir_items);
     items = get_count_dirs(cluster);
 
     // cluster is full of directory records
@@ -504,8 +630,8 @@ static bool is_cluster_full_links(const int32_t id_cluster) {
     size_t items = 0;
     int32_t cluster[sb.count_links];
 
-    FS_SEEK_SET(sb.addr_data + id_cluster * sb.count_links * sizeof(int32_t));
-    FS_READ(cluster, sizeof(int32_t), sb.count_links);
+    fs_seek_set(sb.addr_data + id_cluster * sb.count_links * sizeof(int32_t));
+    fs_read_int32t(cluster, sizeof(int32_t), sb.count_links);
     items = get_count_links(cluster);
 
     // cluster is full of directory records
@@ -550,10 +676,10 @@ int32_t get_link(struct inode* source) {
 
     // if new link was created, write the change to filesystem
     if (is_new_link) {
-        FS_SEEK_SET(sb.addr_inodes + source->id_inode * sizeof(struct inode));
-        FS_WRITE(source, sizeof(struct inode), 1);
+        fs_seek_set(sb.addr_inodes + source->id_inode * sizeof(struct inode));
+        fs_write_inode(source, sizeof(struct inode), 1);
 
-        FS_FLUSH;
+        fs_flush();
     }
 
 	return id_free_cluster;

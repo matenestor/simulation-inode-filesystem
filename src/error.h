@@ -35,11 +35,11 @@ enum __error {
 
 enum __error my_errno;
 
+bool is_error();
 void reset_myerrno();
 void set_myerrno(enum __error);
-char* my_strerror(enum __error);
 void my_perror(const char*);
-void my_exit();
-bool is_error();
+void err_exit_msg();
+char* my_strerror(enum __error);
 
 #endif

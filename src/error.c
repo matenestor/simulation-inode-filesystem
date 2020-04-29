@@ -1,9 +1,13 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "error.h"
 #include "inc/logger_api.h"
+
+
+bool is_error() {
+    return my_errno != Err_no_error;
+}
 
 
 void reset_myerrno() {
@@ -13,6 +17,18 @@ void reset_myerrno() {
 
 void set_myerrno(const enum __error err) {
     my_errno = err;
+}
+
+
+void my_perror(const char* msg) {
+    fprintf(stderr, "%s: %s\n", msg, my_strerror(my_errno));
+}
+
+
+void err_exit_msg() {
+    // print error to console and log file
+    my_perror("exit");
+    log_fatal("Exiting with error type: %s", my_strerror(my_errno));
 }
 
 
@@ -96,55 +112,33 @@ char* my_strerror(const enum __error err) {
             strcpy(err_str, "no such file or directory");
             break;
 
-    	case Err_item_name_long:
-			strcpy(err_str, "item name too long");
-			break;
+        case Err_item_name_long:
+            strcpy(err_str, "item name too long");
+            break;
 
-		case Err_inode_no_inodes:
-			strcpy(err_str, "no more inodes available");
-			break;
+        case Err_inode_no_inodes:
+            strcpy(err_str, "no more inodes available");
+            break;
 
-    	case Err_inode_no_links:
-			strcpy(err_str, "no more links in inode available");
-			break;
+        case Err_inode_no_links:
+            strcpy(err_str, "no more links in inode available");
+            break;
 
-    	case Err_cluster_no_clusters:
-			strcpy(err_str, "no more data space available");
-			break;
+        case Err_cluster_no_clusters:
+            strcpy(err_str, "no more data space available");
+            break;
 
-    	case Err_cluster_full:
-			strcpy(err_str, "cluster is full");
-			break;
+        case Err_cluster_full:
+            strcpy(err_str, "cluster is full");
+            break;
 
         case Err_fs_error:
             strcpy(err_str, "Filesystem internal error.");
             break;
 
-		default:
+        default:
             strcpy(err_str, "");
     }
 
     return err_str;
-}
-
-
-void my_perror(const char* msg) {
-    fprintf(stderr, "%s: %s\n", msg, my_strerror(my_errno));
-}
-
-
-void my_exit() {
-    // print error to console and log file
-    my_perror("exit");
-    log_fatal("Exiting with error type: %s", my_strerror(my_errno));
-
-    // destroy logger
-    logger_destroy();
-
-    exit(EXIT_FAILURE);
-}
-
-
-bool is_error() {
-    return my_errno != Err_no_error;
 }

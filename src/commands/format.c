@@ -70,7 +70,7 @@ static int is_valid_size(const char* num_str, size_t* size) {
                         ret = RETURN_SUCCESS;
                     }
                     else {
-                        printf("use range from 1 MB to %d MB\n", FS_SIZE_MAX);
+                        printf("use range from 1 to %d [MB]\n", FS_SIZE_MAX);
                         set_myerrno(Err_fs_size_sim_range);
                     }
                 }
@@ -110,7 +110,7 @@ static int init_superblock(const int size, const size_t clstr_cnt) {
     int32_t addr_dat = mb2b(size) - (clstr_cnt * FS_CLUSTER_SIZE);
 
     // init superblock variables
-    strncpy(sb.signature, SIGNATURE, strlen(SIGNATURE));
+    strncpy(sb.signature, "kmat95", sizeof(sb.signature) - 1);
     sprintf(sb.volume_descriptor, "%s, made by matenestor", datetime);
     sb.disk_size = size;
     sb.cluster_size = FS_CLUSTER_SIZE;
@@ -123,9 +123,9 @@ static int init_superblock(const int size, const size_t clstr_cnt) {
     sb.addr_data = addr_dat;
 
     // write superblock to file
-    FS_WRITE(&sb, sizeof(struct superblock), 1);
+    fs_write_superblock(&sb, sizeof(struct superblock), 1);
 
-	FS_FLUSH;
+	fs_flush();
 
     return RETURN_SUCCESS;
 }
@@ -139,9 +139,9 @@ static int init_bitmap(const size_t clstr_cnt) {
     // except for first block, it is used for root directory during format
     bitmap[0] = false;
 
-    FS_WRITE(bitmap, sizeof(bool), clstr_cnt);
+    fs_write_bool(bitmap, sizeof(bool), clstr_cnt);
 
-	FS_FLUSH;
+	fs_flush();
 
     return RETURN_SUCCESS;
 }
@@ -191,9 +191,9 @@ static int init_inodes(const size_t clstr_cnt) {
         memcpy(&inodes[i], &in, sizeof(struct inode));
     }
 
-    FS_WRITE(inodes, sizeof(struct inode), clstr_cnt);
+    fs_write_inode(inodes, sizeof(struct inode), clstr_cnt);
 
-    FS_FLUSH;
+    fs_flush();
 
 	return RETURN_SUCCESS;
 }
@@ -202,7 +202,7 @@ static int init_inodes(const size_t clstr_cnt) {
 static int init_clusters(const size_t fs_size) {
     size_t i;
     // how much bytes is missing till end of filesystem
-    size_t diff = fs_size - FS_TELL;
+    size_t diff = fs_size - fs_tell();
     // helper array to be filled from
     char zeros[CACHE_SIZE] = {0};
 
@@ -211,12 +211,12 @@ static int init_clusters(const size_t fs_size) {
     //  than stack can handle
     // fill rest of filesystem with batches of zeros
     for (i = 0; i < diff / CACHE_SIZE; ++i) {
-        FS_WRITE(zeros, sizeof(char), CACHE_SIZE);
+        fs_write_char(zeros, sizeof(char), CACHE_SIZE);
     }
     // fill zeros left till very end of filesystem
-    FS_WRITE(zeros, sizeof(char), diff % CACHE_SIZE);
+    fs_write_char(zeros, sizeof(char), diff % CACHE_SIZE);
 
-	FS_FLUSH;
+	fs_flush();
 
     return RETURN_SUCCESS;
 }
@@ -232,10 +232,10 @@ static int init_root_dir() {
     strncpy(di[2].item_name, "/", 1); // TODO necessary?
 
     // write root directory items to file
-    FS_SEEK_SET(sb.addr_data);
-    FS_WRITE(&di, sizeof(struct directory_item), 3);
+    fs_seek_set(sb.addr_data);
+    fs_write_directory_item(di, sizeof(struct directory_item), 3);
 
-    FS_FLUSH;
+    fs_flush();
 
     return RETURN_SUCCESS;
 }
@@ -244,39 +244,52 @@ static int init_root_dir() {
 int format_(const char* fs_size_str, const char* path) {
     int ret = RETURN_FAILURE;
     size_t fs_size = 0;
+    size_t clstr_cnt, fs10, meta = 0;
 
-    log_info("Formatting filesystem [%s]", path);
+    log_info("Formatting filesystem [path: %s] [size: %s]", path, fs_size_str);
 
     if (is_valid_size(fs_size_str, &fs_size) == RETURN_SUCCESS) {
-        if ((FS_VARIABLE_NAME = fopen(path, "wb+")) != NULL) {
+        // Count of clusters in data blocks part is equal to bitmaps sizes and count of inodes.
+        // 'fs_size' is in MB, 'cluster_size' is in B, data part is 90 % of whole filesystem
+        clstr_cnt = ((size_t) (mb2b(fs_size) * PERCENTAGE)) / FS_CLUSTER_SIZE;
 
-            // count of clusters in data block is also used as bitmaps sizes and count of inodes
-            // size is in MB, cluster_size is in B
-            // with cluster size 1024 B, there is obvious redundancy, but what if cluster size will change..?
-            // data part is 90 % of whole filesystem
-            const size_t clstr_cnt = (size_t) (mb2b(fs_size) * PERCENTAGE) / FS_CLUSTER_SIZE;
+        // size of 10 % of filesystem
+        fs10 = mb2b(fs_size) * (1.0-PERCENTAGE);
+        // size of filesystem part without data blocks part (superblock, inodes bitmap, data bitmap, inodes)
+        meta = sizeof(struct superblock) + 2*clstr_cnt + clstr_cnt*sizeof(struct inode);
 
-            // superblock
-            init_superblock(fs_size, clstr_cnt);
-            // bitmap of inodes
-            init_bitmap(clstr_cnt);
-            // bitmap of data blocks
-            init_bitmap(clstr_cnt);
-            // inodes
-            init_inodes(clstr_cnt);
-            // data clusters
-            init_clusters(mb2b(fs_size));
-            // root directory
-            init_root_dir();
+        // meta part of filesystem does not interfere with data blocks part
+        if (fs10 - meta > 0) {
+            if ((filesystem = fopen(path, "wb+")) != NULL) {
+                // superblock
+                init_superblock(fs_size, clstr_cnt);
+                // bitmap of inodes
+                init_bitmap(clstr_cnt);
+                // bitmap of data blocks
+                init_bitmap(clstr_cnt);
+                // inodes
+                init_inodes(clstr_cnt);
+                // data clusters
+                init_clusters(mb2b(fs_size));
+                // root directory
+                init_root_dir();
 
-            log_info("Filesystem [%s] with size [%d] formatted.", path, fs_size);
-            printf("format: filesystem formatted, size: %zu MB\n", fs_size);
-            ret = RETURN_SUCCESS;
+                log_info("Filesystem [%s] with size [%d] formatted.", path, fs_size);
+                printf("format: filesystem formatted, size: %d MB\n", fs_size);
+                ret = RETURN_SUCCESS;
+            }
+            else {
+                log_error("System error while formatting: %s", strerror(errno));
+                perror("format");
+                errno = 0;
+            }
         }
         else {
-            log_error("System error while formatting: %s", strerror(errno));
-            perror("format");
-            errno = 0;
+            log_error("Not possible to format with given sizes. [fs size: %d] [cluster size: %d]", fs_size, FS_CLUSTER_SIZE);
+            fprintf(stderr, "Not possible to format with given sizes.\n"
+                            "Either decrease cluster size, or increase filesystem size.\n"
+                            "[fs size: %d] [cluster size: %d]",
+                            fs_size, FS_CLUSTER_SIZE);
         }
     }
     else {

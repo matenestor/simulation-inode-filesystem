@@ -17,9 +17,6 @@ DIR_INC = $(ROOT)inc/
 # object directory
 DIR_OBJ = obj/
 
-# filesystems directory
-DIR_FS = fs/
-
 # include location of dependent header files
 IDEPS = -I$(DIR_INC)
 
@@ -46,7 +43,6 @@ $(DIR_OBJ)%.o: $(ROOT)%
 mkdirs:
 	mkdir -p $(patsubst $(ROOT)%, $(DIR_OBJ)%, $(DIR_SRC))
 	mkdir -p $(DIR_LOG)
-	mkdir -p $(DIR_FS)
 
 .PHONY: mkdirs
 

@@ -1,26 +1,11 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
-#include "inc/fs_path.h"
+#include "inc/fs_prompt.h"
 #include "inc/inode.h"
-#include "fs_operations.h"
 
-
-// since there is no standard way to flush stdin and making resizable input buffer
-// for this project is overkill, let me just make the buffers big
+// input buffer size for user
 #define BUFFIN_LENGTH  1024
-#define BUFFOUT_LENGTH 1024
-#define BUFF_PWD       64
-
-// +3 for : > and space in FORMAT_PROMPT
-#define STRLEN_PROMPT (STRLEN_FSNAME+BUFF_PWD+3)
-
-// length of longest command available 'format' is 7 with \0
-#define STRLEN_LONGEST_CMD 7
-
-#define FORMAT_PROMPT "%s:%s> "
-
-#define PR_TRY_HELP "Try 'help' for more information."
 
 #define PR_USAGE "Available commands:\n" \
                  "  cp      SOURCE DEST       Copy SOURCE to DEST.\n" \
@@ -70,21 +55,23 @@
 
 /** Filesystem name given by user. Does not change during runtime. */
 static char fs_name[STRLEN_FSNAME];
-/** Filesystem path. Does not change during runtime. */
-static char fs_path[STRLEN_FSPATH];
 
-/** Current working directory cache. Do change after every 'cd' command. */
-char buff_pwd[BUFF_PWD];
-/** Whole prompt in console. Do change after every pwd change. */
+/** Is simulation running or not. */
+bool is_running;
+
+/** Current working directory prompt in console. */
 char buff_prompt[STRLEN_PROMPT];
 
 /** Filesystem file, which is being worked with. */
-FILE* FS_VARIABLE_NAME;
+FILE* filesystem;
 
 /** Super block of actual using filesystem. */
 struct superblock sb = {0};
 /** Inode, where user currently is. */
 struct inode in_actual = {0};
+
+extern int init_filesystem(const char*);
+extern void close_filesystem();
 
 extern int cp_(const char*, const char*);
 extern int mv_(const char*, const char*);
@@ -102,6 +89,5 @@ extern int load_(const char*);
 extern int format_(const char*, const char*);
 extern int fsck_();
 extern int tree_(const char*);
-
 
 #endif

@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "main.h"
-#include "inc/fs_path.h"
+#include "inc/fs_prompt.h"
 #include "inc/return_codes.h"
 
 #include "inc/logger_api.h"
@@ -14,23 +14,25 @@
 
 void signal_handler(int signum) {
     close_filesystem();
+    is_running = false; // TODO is loop waiting on fgets, or ctrl+C breaks it?
     set_myerrno(Err_signal_interrupt);
-    my_exit();
+    err_exit_msg();
 }
 
 
 /******************************************************************************
  *
  * 	Copy filename, given as argument of program, to program buffer.
- *  Available are only letters, numbers, dots and underscores of total length of 31.
+ *  Available are only letters, numbers, dots, underscores
+ *  and slashes of total length of 'STRLEN_FSNAME'.
  *
  * 	On success, 0 is returned.
  * 	On error, -1 is returned, and my_errno is set appropriately.
  *
  */
-int parse_fsname(char* fs_name, const char* arg_name) {
+int parse_fsname(char* fsn, const char* arg_name) {
     // return value
-    int ret = RETURN_SUCCESS;
+    int ret = RETURN_FAILURE;
 
     // length of provided name
     size_t len = strlen(arg_name);
@@ -39,20 +41,24 @@ int parse_fsname(char* fs_name, const char* arg_name) {
     if (len < STRLEN_FSNAME) {
         for (i = 0; i < len; ++i) {
             // not valid if char is not letter, number or underscore
-            if (!(isalnum(arg_name[i]) || isunscr(arg_name[i]) || isdot(arg_name[i]))) {
+            if (!(isalnum(arg_name[i]) || isunscr(arg_name[i]) || isdot(arg_name[i]) || isslash(arg_name[i]))) {
                 fputs("Use only letters, numbers, dots and/or underscores!\n", stderr);
                 set_myerrno(Err_fs_name_invalid);
-                ret = RETURN_FAILURE;
+
+                break;
             }
         }
 
         // parse name if is valid
-        strncpy(fs_name, arg_name, len);
+        if (!is_error()) {
+            strncpy(fsn, arg_name, len);
+
+            ret = RETURN_SUCCESS;
+        }
     }
     else {
-        fputs("Maximal length on name is 31 characters!\n", stderr);
+        fprintf(stderr, "Maximal length on name is %d characters!\n", STRLEN_FSNAME);
         set_myerrno(Err_fs_name_long);
-        ret = RETURN_FAILURE;
     }
 
     return ret;
@@ -60,50 +66,48 @@ int parse_fsname(char* fs_name, const char* arg_name) {
 
 
 int main(int argc, char const **argv) {
-    // name of filesystem given by user
-    char fs_name[STRLEN_FSNAME] = {0};
+    int status_exit = RETURN_SUCCESS;
 
-    // used for initialization
-    reset_myerrno();
+    // name of filesystem given by user
+    char fsn[STRLEN_FSNAME] = {0};
 
     // init logger and set level
     if (logger_init() == RETURN_SUCCESS) {
+        #if DEBUG
         logger_set_level(Log_Debug);
+        #else
+        logger_set_level(Log_Info);
+        #endif
     }
+
+    // used for initialization
+    reset_myerrno();
 
     // register signal interrupt
     signal(SIGINT, signal_handler);
 
     // if name was provided, try to parse it
     if (argc > 1) {
-        parse_fsname(fs_name, argv[1]);
+        // if name is ok, run
+        if (parse_fsname(fsn, argv[1]) == RETURN_SUCCESS) {
+            puts(PR_INTRO);
+
+            status_exit = init_simulation(fsn);
+        }
+        // if error occurred during parsing process, print error
+        else {
+            puts(PR_HELP);
+            err_exit_msg();
+        }
     }
     // if no name was provided, set my_errno
     else {
-        set_myerrno(Err_fs_name_missing);
-    }
-
-    // if name is ok, load and run
-    if (!is_error()) {
-        puts(PR_INTRO);
-
-        // run, if filesystem was loaded successfully, when exists,
-        // or user was notified about possible formatting, when doesn't exists
-        if (load(fs_name) == RETURN_SUCCESS) {
-            run();
-        }
-        else {
-            my_exit();
-        }
-    }
-    // if error occurred during parsing process, exit with error
-    else {
         puts(PR_HELP);
-        my_exit();
+        set_myerrno(Err_fs_name_missing);
     }
 
     // destroy logger
     logger_destroy();
 
-    return EXIT_SUCCESS;
+    return status_exit;
 }

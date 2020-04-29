@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "simulator.h"
 #include "inc/return_codes.h"
@@ -8,66 +7,6 @@
 #include "inc/logger_api.h"
 #include "error.h"
 
-
-void close_filesystem() {
-    if (FS_VARIABLE_NAME != NULL) {
-        fclose(FS_VARIABLE_NAME);
-        log_info("Filesystem [%s] closed.", fs_name);
-    }
-}
-
-
-/******************************************************************************
- *
- * 	Load a file with filesystem, if it exists. Read superblock and first inode.
- * 	If filesystem with given name does not exists, tell user about possible formatting.
- *
- */
-int load(const char* fsn) {
-    int ret = RETURN_SUCCESS;
-
-    log_info("Loading filesystem with name [%s].", fsn);
-
-    // cache filesystem name (only fs name)
-    strncpy(fs_name, fsn, STRLEN_FSNAME);
-    // cache filesystem path (both fs dir and fs name)
-    snprintf(fs_path, STRLEN_FSPATH, FORMAT_FSDIR, fs_name);
-
-    // create prompt, initial pwd is root
-    snprintf(buff_prompt, STRLEN_PROMPT, FORMAT_PROMPT, fs_name, SEPARATOR);
-
-    // if filesystem exists, load it
-    if (access(fs_path, F_OK) == RETURN_SUCCESS) {
-        // filesystem is ready to be loaded
-        if ((FS_VARIABLE_NAME = fopen(fs_path, "rb+")) != NULL) {
-            // cache super block
-            FS_READ(&sb, sizeof(struct superblock), 1);
-            // move to inodes location
-            FS_SEEK_SET(sb.addr_inodes);
-            // cache root inode
-            FS_READ(&in_actual, sizeof(struct inode), 1);
-
-            puts("Filesystem loaded successfully.");
-            puts(PR_TRY_HELP);
-
-            log_info("Filesystem [%s] loaded.", fs_path);
-        }
-        // filesystem is ready to be loaded, but there was an error
-        else {
-            set_myerrno(Err_fs_not_loaded);
-            ret = RETURN_FAILURE;
-        }
-    }
-    // else notify about possible formatting
-    else {
-        puts("No filesystem with this name found. You can format one with command 'format <size>'.");
-        puts(PR_TRY_HELP);
-
-        log_info("Filesystem [%s] not found.", fs_path);
-    }
-
-    return ret;
-}
 
 /******************************************************************************
  *
@@ -77,17 +16,17 @@ int load(const char* fsn) {
  *  On success, 0 is returned. On error, -1 is returned.
  *
  */
-int handle_input(char* command, char* arg1, char* arg2) {
+static int handle_input(char* command, char* arg1, char* arg2) {
     int ret = RETURN_FAILURE;
 
     // discard char
     int c = 0;
-    // program buffer for user's inputs
-    static char buff_in[BUFFIN_LENGTH] = {0};
+    // program buffer for user's inputs; 3x more for 'command', 'arg1' and 'arg2'
+    static char buff_in[3 * BUFFIN_LENGTH] = {0};
 
-    if ((fgets(buff_in, BUFFIN_LENGTH, stdin) != NULL)) {
+    if ((fgets(buff_in, 3 * BUFFIN_LENGTH, stdin) != NULL)) {
         // prevent overflowing input, so it doesn't go to next cycle
-        if (isoverflow(buff_in[BUFFIN_LENGTH - 2])) {
+        if (isoverflow(buff_in[3 * BUFFIN_LENGTH - 2])) {
             // discard everything in stdin and move on
             while ((c = fgetc(stdin)) != '\n' && c != EOF);
             puts("input too large");
@@ -108,14 +47,13 @@ int handle_input(char* command, char* arg1, char* arg2) {
 }
 
 
-void run() {
-    // space only for longest command is enough
-    char command[STRLEN_LONGEST_CMD] = {0};
-    // arguments for paths can be as long as whole input buffer (without some chars, but just leave it)
+static void run() {
+    char command[BUFFIN_LENGTH] = {0};
     char arg1[BUFFIN_LENGTH] = {0};
     char arg2[BUFFIN_LENGTH] = {0};
 
-    bool is_running = true;
+    // TODO when filesystem is not formatted, allow only 'format, help, exit' commands
+    bool is_formatted = false;
 
     while (is_running) {
         // print prompt
@@ -123,8 +61,6 @@ void run() {
 
         // parse input and check which command it is
         if (handle_input(command, arg1, arg2) == RETURN_SUCCESS) {
-
-            // TODO do not allow commands, except for 'format, help, exit', when filesystem is not formatted
 
             if (strcmp(command, CMD_CP) == 0) {
                 cp_(arg1, arg2);
@@ -185,7 +121,7 @@ void run() {
             }
 
             else if (strcmp(command, CMD_FORMAT) == 0) {
-                if (format_(arg1, fs_path) == RETURN_FAILURE) {
+                if (format_(arg1, fs_name) == RETURN_FAILURE) {
                     my_perror("format");
                     reset_myerrno();
                     log_error("Filesystem could not be formatted.");
@@ -210,19 +146,49 @@ void run() {
             }
 
             else {
-                puts("zos: command not found");
-                puts(PR_TRY_HELP);
+                puts("-zos: command not found");
             }
         }
 
         // input buffer is small, so just clear it all
-        BUFF_CLR(command, STRLEN_LONGEST_CMD);
+        BUFF_CLR(command, strlen(command));
         // buffers for arguments are cleared only as much as necessary (a bit of optimization)
         BUFF_CLR(arg1, strlen(arg1));
         BUFF_CLR(arg2, strlen(arg2));
     }
+}
+
+
+int init_simulation(const char* fsn) {
+    int status_simulation;
+
+    // cache filesystem name
+    strncpy(fs_name, fsn, strlen(fsn));
+
+    // create prompt, initial pwd is root
+    snprintf(buff_prompt, STRLEN_PROMPT, FORMAT_PROMPT, fs_name, SEPARATOR);
+
+    // if filesystem exists and was loaded successfully, or user was notified about
+    // possible formatting, prepare for simulation
+    if (init_filesystem(fs_name) == RETURN_SUCCESS) {
+        status_simulation = RETURN_SUCCESS;
+        is_running = true;
+
+        puts("Type 'help' for more information.");
+
+        // run simulation
+        run();
+    }
+    else {
+        status_simulation = RETURN_FAILURE;
+        is_running = false;
+
+        err_exit_msg();
+    }
 
     log_info("Simulation end.");
+
+    return status_simulation;
 }
 
 
@@ -264,12 +230,6 @@ int cat_(const char* arg1) {
 
 
 int cd_(const char* arg1) {
-    int ret = RETURN_FAILURE;
-    return ret;
-}
-
-
-int pwd_() {
     int ret = RETURN_FAILURE;
     return ret;
 }

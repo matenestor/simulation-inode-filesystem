@@ -1,14 +1,13 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "utils.h"
-#include "fs_operations.h"
 #include "inc/fs_cache.h"
+#include "inc/fs_prompt.h"
 #include "inc/return_codes.h"
 
-#include "error.h"
 #include "inc/logger_api.h"
+#include "error.h"
 
 
 static int remove_end_separators(char* path) {
@@ -19,6 +18,7 @@ static int remove_end_separators(char* path) {
 
         // remove all SEPARATORs in the end
         while (*p_path == SEPARATOR[0]) {
+//        while (*p_path == '/') {
             *p_path = '\0';
             --p_path;
         }

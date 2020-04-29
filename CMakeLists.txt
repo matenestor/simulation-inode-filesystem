@@ -7,10 +7,8 @@ add_executable(KIV_ZOS_sp
         src/inc/logger_api.h src/_logger.c src/_logger.h
         src/error.c src/error.h
 
-        src/inc/_fs_varname.h
         src/inc/fs_cache.h
         src/fs_operations.h
-        src/inc/fs_path.h
         src/inc/inode.h
         src/inc/return_codes.h
 
@@ -22,4 +20,4 @@ add_executable(KIV_ZOS_sp
         src/commands/format.c src/commands/format.h
         src/commands/ls.c
         src/commands/mkdir.c
-        )
+        src/commands/pwd.c src/inc/fs_prompt.h)

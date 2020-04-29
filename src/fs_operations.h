@@ -4,22 +4,27 @@
 
 #include <stdint.h>
 
-#include "inc/_fs_varname.h"
 #include "inc/inode.h"
 
-#define SEPARATOR "/"
-
-#define FS_READ(buffer, size, count)  fread(buffer, size, count, FS_VARIABLE_NAME)
-#define FS_WRITE(buffer, size, count) fwrite(buffer, size, count, FS_VARIABLE_NAME)
-#define FS_TELL                       ftell(FS_VARIABLE_NAME)
-#define FS_SEEK_SET(offset)           fseek(FS_VARIABLE_NAME, offset, SEEK_SET)
-#define FS_SEEK_CUR(offset)           fseek(FS_VARIABLE_NAME, offset, SEEK_CUR)
-#define FS_FLUSH					  fflush(FS_VARIABLE_NAME)
+void fs_seek_set(unsigned int);
+long int fs_tell();
+void fs_flush();
+unsigned int fs_read_superblock(struct superblock*, size_t, size_t);
+unsigned int fs_read_inode(struct inode*, size_t, size_t);
+unsigned int fs_read_directory_item(struct directory_item*, size_t, size_t);
+unsigned int fs_read_int32t(int32_t*, size_t, size_t);
+unsigned int fs_read_bool(bool*, size_t, size_t);
+unsigned int fs_read_char(char*, size_t, size_t);
+unsigned int fs_write_superblock(const struct superblock*, size_t, size_t);
+unsigned int fs_write_inode(const struct inode*, size_t, size_t);
+unsigned int fs_write_directory_item(const struct directory_item*, size_t, size_t);
+unsigned int fs_write_int32t(const int32_t*, size_t, size_t);
+unsigned int fs_write_bool(const bool*, size_t, size_t);
+unsigned int fs_write_char(char*, size_t, size_t);
 
 int32_t get_inode_by_path(struct inode*, const char*);
 int32_t create_inode(struct inode*, enum item, int32_t);
 
-//int32_t get_last_link_value(const struct inode*);
 int32_t get_link(struct inode*);
 
 #endif
