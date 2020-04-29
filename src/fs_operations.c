@@ -334,16 +334,16 @@ static int32_t get_empty_bitmap_field(const int32_t address) {
 			if (bitmap[j]) {
 				// position of field in whole bitmap
 				index = i * CACHE_SIZE + j;
+                // turn off the index
+                bitmap_field_off(address, index);
 
-				break;
+                break;
 			}
 		}
 
 		// if free field was found, break
 		if (index != RETURN_FAILURE) {
 			log_info("Free cluster, type: [%s], index: [%d].", address == sb.addr_bm_inodes ? "inodes" : "data", index);
-
-			// TODO bitmap_field_off here
 
 			break;
 		}
@@ -396,9 +396,6 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
 
 	// if there is free inode and data cluster for it, use it
 	if (!(id_free_inode == RETURN_FAILURE || id_free_cluster == RETURN_FAILURE)) {
-		bitmap_field_off(sb.addr_bm_inodes, id_free_inode);
-		bitmap_field_off(sb.addr_bm_data, id_free_cluster);
-
 		// cache the free inode, in order to init it
 		fs_seek_set(sb.addr_inodes + id_free_inode * sizeof(struct inode));
 		fs_read_inode(new_inode, sizeof(struct inode), 1);
@@ -453,15 +450,7 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
  *
  */
 static int32_t _init_link() {
-	int32_t free_index = RETURN_FAILURE;
-
-	free_index = get_empty_bitmap_field(sb.addr_bm_data);
-
-	if (free_index != RETURN_FAILURE) {
-		bitmap_field_off(sb.addr_bm_data, free_index);
-	}
-
-	return free_index;
+	return get_empty_bitmap_field(sb.addr_bm_data);
 }
 
 
