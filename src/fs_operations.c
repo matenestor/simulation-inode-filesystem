@@ -313,20 +313,36 @@ static void bitmap_field_on(const int32_t address, const int32_t index) {
 /******************************************************************************
  *
  *  Finds first empty field in bitmap on given address. (Either inodes or data clusters bitmap).
- *
+ *  This function has a counter for checking limit of fields to read. After each loop it decreases,
+ *  if there is still more fields than CACHE_SIZE.
+ *  Eg. when filesystem has 1 MB size, there is 921 clusters, thus 921 B fields. 
+ *   With CACHE_SIZE bigger than that (currently 8192 B), it would read both bitmaps 
+ *   and also completely different part of filesystem.
+ *  If no field is available, error is set.
+ * 
  *  Returns index number of empty bitmap field, or 'RETURN_FAILURE'.
  *
  */
 static int32_t get_empty_bitmap_field(const int32_t address) {
 	size_t i, j, items;
 	size_t index = RETURN_FAILURE;
+    // count of all available field to check
+	int counter = sb.cluster_count;
 	bool bitmap[CACHE_SIZE] = {0};
 
 	for (i = 0; i < sb.cluster_count; i += CACHE_SIZE) {
 		// cache part of bitmap
 		fs_seek_set(address + i);
-        // TODO cant read with size CACHE_SIZE, when there is less fields than that
-		items = fs_read_bool(bitmap, sizeof(bool), CACHE_SIZE);
+
+        // check if there is available more fields that CACHE_SIZE
+        if (counter - CACHE_SIZE >= 0) {
+            items = fs_read_bool(bitmap, sizeof(bool), CACHE_SIZE);
+            counter -= CACHE_SIZE;
+        }
+        // if count of fields is less than size of CACHE_SIZE, read only what is remaining
+        else {
+            items = fs_read_bool(bitmap, sizeof(bool), counter);
+        }
 
 		// check cached array for a free field
 		for (j = 0; j < items; ++j) {
