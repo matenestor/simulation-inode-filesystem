@@ -56,6 +56,9 @@
 /** Filesystem name given by user. Does not change during runtime. */
 static char fs_name[STRLEN_FSNAME];
 
+/** Is filesystem formatted or not. */
+static bool is_formatted;
+
 /** Is simulation running or not. */
 bool is_running;
 
@@ -70,7 +73,7 @@ struct superblock sb = {0};
 /** Inode, where user currently is. */
 struct inode in_actual = {0};
 
-extern int init_filesystem(const char*);
+extern int init_filesystem(const char*, bool*);
 extern void close_filesystem();
 
 extern int cp_(const char*, const char*);

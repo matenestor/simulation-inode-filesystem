@@ -14,9 +14,10 @@
 
 void signal_handler(int signum) {
     close_filesystem();
-    is_running = false; // TODO is loop waiting on fgets, or ctrl+C breaks it?
+    is_running = false; // TODO loop still waiting on fgets after ctrl+C
     set_myerrno(Err_signal_interrupt);
     err_exit_msg();
+    log_fatal("Exiting with error type: %s", my_strerror(my_errno));
 }
 
 
@@ -98,6 +99,7 @@ int main(int argc, char const **argv) {
         else {
             puts(PR_HELP);
             err_exit_msg();
+            log_fatal("Exiting with error type: %s", my_strerror(my_errno));
         }
     }
     // if no name was provided, set my_errno

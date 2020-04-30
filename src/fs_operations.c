@@ -83,7 +83,7 @@ unsigned int fs_write_char(const char* buffer, const size_t size, const size_t c
  * 	If filesystem with given name does not exists, tell user about possible formatting.
  *
  */
-int init_filesystem(const char* fsn) {
+int init_filesystem(const char* fsn, bool* is_formatted) {
     int ret = RETURN_FAILURE;
 
     log_info("Loading filesystem with name [%s].", fsn);
@@ -100,6 +100,7 @@ int init_filesystem(const char* fsn) {
             fs_read_inode(&in_actual, sizeof(struct inode), 1);
 
             puts("Filesystem loaded successfully.");
+            *is_formatted = true;
             ret = RETURN_SUCCESS;
 
             log_info("Filesystem [%s] loaded.", fsn);
@@ -107,11 +108,13 @@ int init_filesystem(const char* fsn) {
             // filesystem is ready to be loaded, but there was an error
         else {
             set_myerrno(Err_fs_not_loaded);
+            *is_formatted = false;
         }
     }
         // else notify about possible formatting
     else {
         puts("No filesystem with this name found. You can format one with command 'format <size>'.");
+        *is_formatted = false;
         ret = RETURN_SUCCESS;
 
         log_info("Filesystem [%s] not found.", fsn);

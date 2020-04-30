@@ -2,7 +2,6 @@
 #include <string.h>
 
 #include "error.h"
-#include "inc/logger_api.h"
 
 
 bool is_error() {
@@ -28,7 +27,6 @@ void my_perror(const char* msg) {
 void err_exit_msg() {
     // print error to console and log file
     my_perror("exit");
-    log_fatal("Exiting with error type: %s", my_strerror(my_errno));
 }
 
 

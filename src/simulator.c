@@ -53,8 +53,6 @@ static void run() {
     char arg2[BUFFIN_LENGTH] = {0};
 
     // TODO when filesystem is not formatted, allow only 'format, help, exit' commands
-    bool is_formatted = false;
-
     while (is_running) {
         // print prompt
         fputs(buff_prompt, stdout);
@@ -62,78 +60,16 @@ static void run() {
         // parse input and check which command it is
         if (handle_input(command, arg1, arg2) == RETURN_SUCCESS) {
 
-            if (strcmp(command, CMD_CP) == 0) {
-                cp_(arg1, arg2);
-            }
-
-            else if (strcmp(command, CMD_MV) == 0) {
-                mv_(arg1, arg2);
-            }
-
-            else if (strcmp(command, CMD_RM) == 0) {
-                rm_(arg1);
-            }
-
-            else if (strcmp(command, CMD_MKDIR) == 0) {
-                if (mkdir_(arg1) == RETURN_FAILURE) {
-                    my_perror("mkdir");
-                    reset_myerrno();
-                }
-            }
-
-            else if (strcmp(command, CMD_RMDIR) == 0) {
-                rmdir_(arg1);
-            }
-
-            else if (strcmp(command, CMD_LS) == 0) {
-                if (ls_(arg1) == RETURN_FAILURE) {
-                    my_perror("ls");
-                    reset_myerrno();
-                }
-            }
-
-            else if (strcmp(command, CMD_CAT) == 0) {
-                cat_(arg1);
-            }
-
-            else if (strcmp(command, CMD_CD) == 0) {
-                cd_(arg1);
-            }
-
-            else if (strcmp(command, CMD_PWD) == 0) {
-                pwd_();
-            }
-
-            else if (strcmp(command, CMD_INFO) == 0) {
-                info_(arg1);
-            }
-
-            else if (strcmp(command, CMD_INCP) == 0) {
-                incp_(arg1, arg2);
-            }
-
-            else if (strcmp(command, CMD_OUTCP) == 0) {
-                outcp_(arg1, arg2);
-            }
-
-            else if (strcmp(command, CMD_LOAD) == 0) {
-                load_(arg1);
-            }
-
-            else if (strcmp(command, CMD_FORMAT) == 0) {
+            // allowed commands without formatting
+            if (strcmp(command, CMD_FORMAT) == 0) {
                 if (format_(arg1, fs_name) == RETURN_FAILURE) {
                     my_perror("format");
                     reset_myerrno();
                     log_error("Filesystem could not be formatted.");
                 }
-            }
-
-            else if (strcmp(command, CMD_FSCK) == 0) {
-                fsck_();
-            }
-
-            else if (strcmp(command, CMD_TREE) == 0) {
-                tree_(arg1);
+                else {
+                    is_formatted = true;
+                }
             }
 
             else if (strcmp(command, CMD_HELP) == 0) {
@@ -145,8 +81,80 @@ static void run() {
                 is_running = false;
             }
 
+            // after filesystem is formatted, all commands are allowed
+            else if (is_formatted) {
+                if (strcmp(command, CMD_CP) == 0) {
+                    cp_(arg1, arg2);
+                }
+
+                else if (strcmp(command, CMD_MV) == 0) {
+                    mv_(arg1, arg2);
+                }
+
+                else if (strcmp(command, CMD_RM) == 0) {
+                    rm_(arg1);
+                }
+
+                else if (strcmp(command, CMD_MKDIR) == 0) {
+                    if (mkdir_(arg1) == RETURN_FAILURE) {
+                        my_perror("mkdir");
+                        reset_myerrno();
+                    }
+                }
+
+                else if (strcmp(command, CMD_RMDIR) == 0) {
+                    rmdir_(arg1);
+                }
+
+                else if (strcmp(command, CMD_LS) == 0) {
+                    if (ls_(arg1) == RETURN_FAILURE) {
+                        my_perror("ls");
+                        reset_myerrno();
+                    }
+                }
+
+                else if (strcmp(command, CMD_CAT) == 0) {
+                    cat_(arg1);
+                }
+
+                else if (strcmp(command, CMD_CD) == 0) {
+                    cd_(arg1);
+                }
+
+                else if (strcmp(command, CMD_PWD) == 0) {
+                    pwd_();
+                }
+
+                else if (strcmp(command, CMD_INFO) == 0) {
+                    info_(arg1);
+                }
+
+                else if (strcmp(command, CMD_INCP) == 0) {
+                    incp_(arg1, arg2);
+                }
+
+                else if (strcmp(command, CMD_OUTCP) == 0) {
+                    outcp_(arg1, arg2);
+                }
+
+                else if (strcmp(command, CMD_LOAD) == 0) {
+                    load_(arg1);
+                }
+
+                else if (strcmp(command, CMD_FSCK) == 0) {
+                    fsck_();
+                }
+
+                else if (strcmp(command, CMD_TREE) == 0) {
+                    tree_(arg1);
+                }
+
+                else {
+                    puts("-zos: command not found");
+                }
+            }
             else {
-                puts("-zos: command not found");
+                puts("Filesystem not formatted. You can format one with command 'format <size>'.");
             }
         }
 
@@ -170,7 +178,7 @@ int init_simulation(const char* fsn) {
 
     // if filesystem exists and was loaded successfully, or user was notified about
     // possible formatting, prepare for simulation
-    if (init_filesystem(fs_name) == RETURN_SUCCESS) {
+    if (init_filesystem(fs_name, &is_formatted) == RETURN_SUCCESS) {
         status_simulation = RETURN_SUCCESS;
         is_running = true;
 
