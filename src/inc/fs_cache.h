@@ -10,6 +10,9 @@
 extern FILE* filesystem;
 extern struct superblock sb;
 extern struct inode in_actual;
+
+extern char fs_name[];
+extern char buff_pwd[];
 extern char buff_prompt[];
 
 #endif

@@ -83,15 +83,15 @@ unsigned int fs_write_char(const char* buffer, const size_t size, const size_t c
  * 	If filesystem with given name does not exists, tell user about possible formatting.
  *
  */
-int init_filesystem(const char* fsn, bool* is_formatted) {
+int init_filesystem(bool* is_formatted) {
     int ret = RETURN_FAILURE;
 
-    log_info("Loading filesystem with name [%s].", fsn);
+    log_info("Loading filesystem with name [%s].", fs_name);
 
     // if filesystem exists, load it
-    if (access(fsn, F_OK) == 0) {
+    if (access(fs_name, F_OK) == 0) {
         // filesystem is ready to be loaded
-        if ((filesystem = fopen(fsn, "rb+")) != NULL) {
+        if ((filesystem = fopen(fs_name, "rb+")) != NULL) {
             // cache super block
             fs_read_superblock(&sb, sizeof(struct superblock), 1);
             // move to inodes location
@@ -103,9 +103,9 @@ int init_filesystem(const char* fsn, bool* is_formatted) {
             *is_formatted = true;
             ret = RETURN_SUCCESS;
 
-            log_info("Filesystem [%s] loaded.", fsn);
+            log_info("Filesystem [%s] loaded.", fs_name);
         }
-            // filesystem is ready to be loaded, but there was an error
+        // filesystem is ready to be loaded, but there was an system error
         else {
             set_myerrno(Err_fs_not_loaded);
             *is_formatted = false;
@@ -117,7 +117,7 @@ int init_filesystem(const char* fsn, bool* is_formatted) {
         *is_formatted = false;
         ret = RETURN_SUCCESS;
 
-        log_info("Filesystem [%s] not found.", fsn);
+        log_info("Filesystem [%s] not found.", fs_name);
     }
 
     return ret;

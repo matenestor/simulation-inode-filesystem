@@ -71,6 +71,8 @@ static int list_indirect_links_lvl2(const struct inode* source) {
 int ls_(const char* path) {
     struct inode in_tmp;
 
+    log_info("ls: [%s]", path);
+
     // no path given -- list actual directory
     if (strcmp(path, "") == 0) {
         memcpy(&in_tmp, &in_actual, sizeof(struct inode));
@@ -95,6 +97,7 @@ int ls_(const char* path) {
 
         default:
             set_myerrno(Err_item_not_exists);
+            log_warning("ls: unable to list [%s]", path);
     }
 
     return 0;

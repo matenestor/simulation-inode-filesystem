@@ -18,7 +18,6 @@ static int remove_end_separators(char* path) {
 
         // remove all SEPARATORs in the end
         while (*p_path == SEPARATOR[0]) {
-//        while (*p_path == '/') {
             *p_path = '\0';
             --p_path;
         }

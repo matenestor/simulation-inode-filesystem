@@ -1,8 +1,9 @@
+#include <stdio.h>
 
-#include "../inc/return_codes.h"
+#include "../inc/fs_cache.h"
 
 int pwd_() {
-    int ret = RETURN_FAILURE;
+    puts(buff_pwd);
 
     return 0;
 }

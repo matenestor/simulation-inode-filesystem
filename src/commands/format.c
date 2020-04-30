@@ -274,18 +274,18 @@ int format_(const char* fs_size_str, const char* path) {
                 // root directory
                 init_root_dir();
 
-                log_info("Filesystem [%s] with size [%d] formatted.", path, fs_size);
+                log_info("format: Filesystem [%s] with size [%d] formatted.", path, fs_size);
                 printf("format: filesystem formatted, size: %d MB\n", fs_size);
                 ret = RETURN_SUCCESS;
             }
             else {
-                log_error("System error while formatting: %s", strerror(errno));
+                log_error("format: System error while formatting: %s", strerror(errno));
                 perror("format");
                 errno = 0;
             }
         }
         else {
-            log_error("Not possible to format with given sizes. [fs size: %d] [cluster size: %d]", fs_size, FS_CLUSTER_SIZE);
+            log_error("format: Not possible to format with given sizes. [fs size: %d] [cluster size: %d]", fs_size, FS_CLUSTER_SIZE);
             fprintf(stderr, "Not possible to format with given sizes.\n"
                             "Either decrease cluster size, or increase filesystem size.\n"
                             "[fs size: %d] [cluster size: %d]",
@@ -293,7 +293,7 @@ int format_(const char* fs_size_str, const char* path) {
         }
     }
     else {
-        log_error("Simulation error while formatting: %s", my_strerror(my_errno));
+        log_error("format: Simulation error while formatting: %s", my_strerror(my_errno));
         my_perror("format");
         reset_myerrno();
     }

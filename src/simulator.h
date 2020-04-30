@@ -5,7 +5,7 @@
 #include "inc/inode.h"
 
 // input buffer size for user
-#define BUFFIN_LENGTH  1024
+#define BUFF_IN_LENGTH  1024
 
 #define PR_USAGE "Available commands:\n" \
                  "  cp      SOURCE DEST       Copy SOURCE to DEST.\n" \
@@ -53,17 +53,17 @@
 #define isoverflow(c)          ((c) != '\n' && (c) != '\0')
 #define BUFF_CLR(dest, count)  memset(dest, '\0', count)
 
-/** Filesystem name given by user. Does not change during runtime. */
-static char fs_name[STRLEN_FSNAME];
-
 /** Is filesystem formatted or not. */
 static bool is_formatted;
-
 /** Is simulation running or not. */
 bool is_running;
 
+/** Filesystem name given by user. Does not change during runtime. */
+char fs_name[STRLEN_FSNAME];
+/** Filesystem pwd buffer. */
+char buff_pwd[BUFF_PWD_LENGTH];
 /** Current working directory prompt in console. */
-char buff_prompt[STRLEN_PROMPT];
+char buff_prompt[BUFF_PROMPT_LENGTH];
 
 /** Filesystem file, which is being worked with. */
 FILE* filesystem;
@@ -73,7 +73,7 @@ struct superblock sb = {0};
 /** Inode, where user currently is. */
 struct inode in_actual = {0};
 
-extern int init_filesystem(const char*, bool*);
+extern int init_filesystem(bool*);
 extern void close_filesystem();
 
 extern int cp_(const char*, const char*);

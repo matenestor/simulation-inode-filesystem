@@ -22,11 +22,11 @@ static int handle_input(char* command, char* arg1, char* arg2) {
     // discard char
     int c = 0;
     // program buffer for user's inputs; 3x more for 'command', 'arg1' and 'arg2'
-    static char buff_in[3 * BUFFIN_LENGTH] = {0};
+    static char buff_in[3 * BUFF_IN_LENGTH] = {0};
 
-    if ((fgets(buff_in, 3 * BUFFIN_LENGTH, stdin) != NULL)) {
+    if ((fgets(buff_in, 3 * BUFF_IN_LENGTH, stdin) != NULL)) {
         // prevent overflowing input, so it doesn't go to next cycle
-        if (isoverflow(buff_in[3 * BUFFIN_LENGTH - 2])) {
+        if (isoverflow(buff_in[3 * BUFF_IN_LENGTH - 2])) {
             // discard everything in stdin and move on
             while ((c = fgetc(stdin)) != '\n' && c != EOF);
             puts("input too large");
@@ -48,9 +48,9 @@ static int handle_input(char* command, char* arg1, char* arg2) {
 
 
 static void run() {
-    char command[BUFFIN_LENGTH] = {0};
-    char arg1[BUFFIN_LENGTH] = {0};
-    char arg2[BUFFIN_LENGTH] = {0};
+    char command[BUFF_IN_LENGTH] = {0};
+    char arg1[BUFF_IN_LENGTH] = {0};
+    char arg2[BUFF_IN_LENGTH] = {0};
 
     while (is_running) {
         // print prompt
@@ -62,7 +62,7 @@ static void run() {
             // allowed commands without formatting
             if (strcmp(command, CMD_FORMAT) == 0) {
                 if (format_(arg1, fs_name) == RETURN_FAILURE) {
-                    my_perror("format");
+                    my_perror(CMD_FORMAT);
                     reset_myerrno();
                     log_error("Filesystem could not be formatted.");
                 }
@@ -96,7 +96,7 @@ static void run() {
 
                 else if (strcmp(command, CMD_MKDIR) == 0) {
                     if (mkdir_(arg1) == RETURN_FAILURE) {
-                        my_perror("mkdir");
+                        my_perror(CMD_MKDIR);
                         reset_myerrno();
                     }
                 }
@@ -107,7 +107,7 @@ static void run() {
 
                 else if (strcmp(command, CMD_LS) == 0) {
                     if (ls_(arg1) == RETURN_FAILURE) {
-                        my_perror("ls");
+                        my_perror(CMD_LS);
                         reset_myerrno();
                     }
                 }
@@ -171,13 +171,14 @@ int init_simulation(const char* fsn) {
 
     // cache filesystem name
     strncpy(fs_name, fsn, strlen(fsn));
-
-    // create prompt, initial pwd is root
-    snprintf(buff_prompt, STRLEN_PROMPT, FORMAT_PROMPT, fs_name, SEPARATOR);
+    // create initial pwd
+    strncpy(buff_pwd, SEPARATOR, strlen(SEPARATOR));
+    // create prompt
+    snprintf(buff_prompt, BUFF_PROMPT_LENGTH, FORMAT_PROMPT, fs_name, buff_pwd);
 
     // if filesystem exists and was loaded successfully, or user was notified about
     // possible formatting, prepare for simulation
-    if (init_filesystem(fs_name, &is_formatted) == RETURN_SUCCESS) {
+    if (init_filesystem(&is_formatted) == RETURN_SUCCESS) {
         status_simulation = RETURN_SUCCESS;
         is_running = true;
 

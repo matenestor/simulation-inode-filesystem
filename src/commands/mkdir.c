@@ -8,6 +8,7 @@
 #include "../inc/inode.h"
 #include "../inc/return_codes.h"
 
+#include "../inc/logger_api.h"
 #include "../error.h"
 
 
@@ -38,6 +39,8 @@ static bool is_mkdir_possible(const char* path, const char* path_parent) {
 
 int mkdir_(const char* path) {
     int ret = RETURN_FAILURE;
+
+    log_info("mkdir: creating [%s]", path);
 
     // count of records in cluster read
     size_t items = 0;
@@ -97,6 +100,7 @@ int mkdir_(const char* path) {
     }
     else {
         set_myerrno(Err_arg_missing_operand);
+        log_warning("mkdir: unable to make directory [%s]", path);
     }
 
     return ret;
