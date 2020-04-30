@@ -14,10 +14,14 @@
 
 void signal_handler(int signum) {
     close_filesystem();
-    is_running = false; // TODO loop still waiting on fgets after ctrl+C
+    is_running = false;
     set_myerrno(Err_signal_interrupt);
     err_exit_msg();
-    log_fatal("Exiting with error type: %s", my_strerror(my_errno));
+    log_info("Exiting with error type: %s", my_strerror(my_errno));
+    // with ctrl+C, program has to be terminated here, because else it waits for input
+    // in simulator.c > handle_input(...) on fgets(...)
+    // is there any way not to end it here?
+    exit(EXIT_SUCCESS);
 }
 
 

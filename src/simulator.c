@@ -52,7 +52,6 @@ static void run() {
     char arg1[BUFFIN_LENGTH] = {0};
     char arg2[BUFFIN_LENGTH] = {0};
 
-    // TODO when filesystem is not formatted, allow only 'format, help, exit' commands
     while (is_running) {
         // print prompt
         fputs(buff_prompt, stdout);
