@@ -68,6 +68,12 @@ static int list_indirect_links_lvl2(const struct inode* source) {
 }
 
 
+/******************************************************************************
+ *
+ * 	Get inode from given path and list items inside from direct links,
+ * 	indirect links level 1 and indirect links level 2.
+ *
+ */
 int ls_(const char* path) {
     struct inode in_tmp;
 

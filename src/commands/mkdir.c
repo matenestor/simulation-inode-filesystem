@@ -37,6 +37,15 @@ static bool is_mkdir_possible(const char* path, const char* path_parent) {
 }
 
 
+/******************************************************************************
+ *
+ * 	Makes new directory. Check if path was given, parse name from path,
+ * 	check if directory creation is possible, get inode where the directory will be created,
+ * 	get free link in the inode, create new inode for the directory.
+ * 	If everything above is successful, initialize new directory and make record of it
+ * 	in parent inode and data cluster.
+ *
+ */
 int mkdir_(const char* path) {
     int ret = RETURN_FAILURE;
 

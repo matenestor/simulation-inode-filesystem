@@ -13,6 +13,7 @@
 
 
 // ================================================================================================
+// START: Filesystem input/output functions.
 
 void fs_seek_set(const unsigned int offset) {
     fseek(filesystem, (long) offset, SEEK_SET);
@@ -74,12 +75,16 @@ unsigned int fs_write_char(const char* buffer, const size_t size, const size_t c
     return fwrite(buffer, size, count, filesystem);
 }
 
+// END: Filesystem input/output functions.
 // ================================================================================================
 
 
+// ================================================================================================
+// START: Filesystem init and close functions.
+
 /******************************************************************************
  *
- * 	Load a file with filesystem, if it exists. Read superblock and first inode.
+ * 	Load a file with filesystem, if it exists. Read superblock, first inode and set 'is_formatted' to 'true'.
  * 	If filesystem with given name does not exists, tell user about possible formatting.
  *
  */
@@ -136,6 +141,12 @@ void close_filesystem() {
     }
 }
 
+// END: Filesystem init and close functions.
+// ================================================================================================
+
+
+// ================================================================================================
+// START: Filesystem inode search functions.
 
 /******************************************************************************
  *
@@ -295,6 +306,12 @@ int32_t get_inode_by_path(struct inode* in_dest, const char* path) {
 }
 
 
+// END: Filesystem inode search functions.
+// ================================================================================================
+
+// ================================================================================================
+// START: Filesystem bitmap managing functions.
+
 static void bitmap_field_off(const int32_t address, const int32_t index) {
 	bool f = false;
 	fs_seek_set(address + index);
@@ -390,6 +407,12 @@ static int32_t get_empty_bitmap_field(const int32_t address) {
 	return index;
 }
 
+// END: Filesystem bitmap managing functions.
+// ================================================================================================
+
+
+// ================================================================================================
+// START: Filesystem inode creation function.
 
 /******************************************************************************
  *
@@ -457,9 +480,12 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
 	return ret;
 }
 
-
+// END: Filesystem inode creation function.
 // ================================================================================================
 
+
+// ================================================================================================
+// START: Filesystem creation of links in inode.
 
 /******************************************************************************
  *
@@ -692,3 +718,6 @@ int32_t get_link(struct inode* source) {
 
 	return id_free_cluster;
 }
+
+// END: Filesystem creation of links in inode.
+// ================================================================================================

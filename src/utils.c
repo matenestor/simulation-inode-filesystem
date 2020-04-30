@@ -10,6 +10,11 @@
 #include "error.h"
 
 
+/******************************************************************************
+ *
+ * 	Remove separators of directories form end of given path.
+ *
+ */
 static int remove_end_separators(char* path) {
     char* p_path = NULL;
 
@@ -27,6 +32,11 @@ static int remove_end_separators(char* path) {
 }
 
 
+/******************************************************************************
+ *
+ * 	Parse name of last directory in given path.
+ *
+ */
 int parse_name(char* name, const char* path, const size_t length) {
     int ret = RETURN_FAILURE;
     char* last_sep = NULL;
@@ -63,6 +73,11 @@ int parse_name(char* name, const char* path, const size_t length) {
 }
 
 
+/******************************************************************************
+ *
+ * 	Parse path to last element in given path. Everything except the last element.
+ *
+ */
 int parse_parent_path(char* parent_path, const char* path) {
     int ret = RETURN_FAILURE;
     char* last_sep = NULL;
@@ -96,6 +111,11 @@ int parse_parent_path(char* parent_path, const char* path) {
 }
 
 
+/******************************************************************************
+ *
+ * 	Get count of links in indirect links cluster.
+ *
+ */
 size_t get_count_links(int32_t* source) {
     size_t items = 0;
     int32_t* p_link = source;
@@ -109,6 +129,11 @@ size_t get_count_links(int32_t* source) {
 }
 
 
+/******************************************************************************
+ *
+ *  Get count of directory records in directory cluster.
+ *
+ */
 size_t get_count_dirs(struct directory_item* source) {
     size_t items = 0;
     struct directory_item* p_dir = source;
