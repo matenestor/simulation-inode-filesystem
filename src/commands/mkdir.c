@@ -20,12 +20,12 @@
  */
 static bool is_mkdir_possible(const char* path, const char* path_parent) {
     bool is_creatable = false;
-    struct inode tmp = {0};
+    struct inode in_tmp = {0};
 
     // path to destination inode exists
-    if (get_inode_by_path(&tmp, path_parent) != RETURN_FAILURE) {
+    if (get_inode_by_path(&in_tmp, path_parent) != RETURN_FAILURE) {
         // no directory with same name as new being created exists
-        if (get_inode_by_path(&tmp, path) == RETURN_FAILURE) {
+        if (get_inode_by_path(&in_tmp, path) == RETURN_FAILURE) {
             is_creatable = true;
         }
         else {

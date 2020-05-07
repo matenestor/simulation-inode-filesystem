@@ -2,6 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "fs_operations.h"
 #include "inc/fs_cache.h"
 #include "inc/fs_prompt.h"
 #include "inc/inode.h"
@@ -147,26 +148,32 @@ void close_filesystem() {
 
 // ================================================================================================
 // START: Filesystem inode search functions.
-// TODO merge get_inodeid_by_name(...) and get_name_by_inodeid(...)
-// TODO merge get_itemid_by_name(...) and get_name_by_itemid(...)
-//  'DRY'
 
 /******************************************************************************
  *
- * 	Get directory or file by its 'name' in cluster of directory items.
+ *  Searches whole cluster with directory items. Function searches of either 'name' by 'id',
+ *  or 'id' by 'name' in given inode 'source' in all links. What to search for is decided
+ *  by given enum search_by 'key'. When variable, which is looked for, is found,
+ *  function returns 'RETURN_SUCCESS'.
  *
- *  Returns 'id' of inode where item with given 'name' is located, or 'RETURN_FAILURE'.
+ *  'key'   -- Determines if function searches for 'name', or 'id' in 'source'.
+ * 	'name'  -- When function searches for 'name', it is buffer, where result will be stored.
+ * 	           If function searches for 'id', it is const string, which is searched with.
+ * 	'id'    -- When function searches for 'name', it is const int, which is searched with.
+ * 	           If function searches for 'id', it is variable, where result will be stored.
+ * 	'links' -- Cluster with direct links pointing to clusters with directory items, which will be checked.
+ * 	'links_count' -- Count of links in 'links' cluster,
  *
  */
-static int32_t get_itemid_by_name(const char* name, const int32_t* links, const size_t size) {
-    int32_t id = RETURN_FAILURE;
+static int32_t search_cluster(const enum search_by key, char* name, int32_t* id, const int32_t* links, const size_t links_count) {
+    int32_t ret = RETURN_FAILURE;
     size_t i, j, items;
 
     // array with directory items in cluster
     struct directory_item cluster[sb.count_dir_items];
 
     // check every link to cluster with directory items
-    for (i = 0; i < size; ++i) {
+    for (i = 0; i < links_count; ++i) {
         // other links are free
         if (links[i] == FREE_LINK) {
             continue;
@@ -179,34 +186,52 @@ static int32_t get_itemid_by_name(const char* name, const int32_t* links, const 
 
         // loop over existing directory items
         for (j = 0; j < items; ++j) {
-            if (strcmp(name, cluster[j].item_name) == 0) {
-                id = cluster[j].fk_id_inode;
+            if (key == Id_by_name) {
+                // inode of directory item with name 'name' found
+                if (strcmp(name, cluster[j].item_name) == 0) {
+                    *id = cluster[j].fk_id_inode;
+                    ret = RETURN_SUCCESS;
 
-                break;
+                    log_info("Got item id [%d] by name [%s].", *id, name);
+
+                    break;
+                }
             }
-        }
+            else if (key == Name_by_id) {
+                // inode name with 'id' found
+                if (cluster[j].fk_id_inode == *id) {
+                    strncpy(name, cluster[j].item_name, STRLEN_ITEM_NAME - 1);
+                    ret = RETURN_SUCCESS;
 
-        // inode of directory item with name 'name' found
-        if (id > RETURN_FAILURE) {
-			log_info("Got item id [%d] by name [%s].", id, name);
+                    log_info("Got item name [%s] by id [%d].", name, *id);
 
-        	break;
+                    break;
+                }
+            }
         }
     }
 
-    return id;
+    return ret;
 }
 
 
 /******************************************************************************
  *
- *  Get inode 'id' of directory or file by its 'name' in given 'source' inode.
+ * 	Function checks every available link in given inode 'source'.
+ * 	Start with direct links, and continue with indirect links level 1 and level 2, if nothing was found.
+ * 	It reads every cluster with direct links and then call s function 'search_cluster(...)',
+ * 	where the cluster and variables are finally processed.
  *
- *  Returns 'id' of the inode, or 'RETURN_FAILURE'.
- * 
+ * 	'key'    -- Determines if function checks for 'name', or 'id' in 'source'.
+ * 	'name'   -- When function checks for 'name', it is buffer, where result will be stored.
+ * 	            If function checks for 'id', it is const string, which is checked with.
+ * 	'id'     -- When function checks for 'name', it is const int, which is checked with.
+ * 	            If function checks for 'id', it is variable, where result will be stored.
+ * 	'source' -- Inode, which is being checked.
+ *
  */
-static int32_t get_inodeid_by_name(const struct inode* source, const char* name) {
-    int32_t id = RETURN_FAILURE;
+static int32_t search_links(const enum search_by key, char* name, int32_t* id, const struct inode* source) {
+    int32_t ret = RETURN_FAILURE;
     size_t i, links;
 
     // cluster with direct links to be checked
@@ -215,22 +240,22 @@ static int32_t get_inodeid_by_name(const struct inode* source, const char* name)
     int32_t clstr_indirect[sb.count_links];
 
     // first -- check direct links
-    id = get_itemid_by_name(name, source->direct, COUNT_DIRECT_LINKS);
+    ret = search_cluster(key, name, id, source->direct, COUNT_DIRECT_LINKS);
 
     // second -- check indirect links of 1st level
     // note: if count of indirect links lvl 1 needs to be bigger than 1 in future, this `if` is needed to be in loop
-    if (source->indirect1[0] != FREE_LINK && id == RETURN_FAILURE) {
+    if (source->indirect1[0] != FREE_LINK && ret == RETURN_FAILURE) {
         // read whole cluster with 1st level indirect links to clusters with data
         fs_seek_set(sb.addr_data + source->indirect1[0] * sb.count_links * sizeof(int32_t));
         fs_read_int32t(clstr_direct, sizeof(int32_t), sb.count_links);
         links = get_count_links(clstr_direct);
 
-        id = get_itemid_by_name(name, clstr_direct, links);
+        ret = search_cluster(key, name, id, clstr_direct, links);
     }
 
     // third -- check indirect links of 2nd level
     // note: if count of indirect links lvl 2 needs to be bigger than 1 in future, this `if` is needed to be in loop
-    if (source->indirect2[0] != FREE_LINK && id == RETURN_FAILURE) {
+    if (source->indirect2[0] != FREE_LINK && ret == RETURN_FAILURE) {
         // read whole cluster with 2nd level indirect links to clusters with 1st level indirect links
         fs_seek_set(sb.addr_data + source->indirect2[0] * sb.count_links * sizeof(int32_t));
         fs_read_int32t(clstr_indirect, sizeof(int32_t), sb.count_links);
@@ -242,14 +267,19 @@ static int32_t get_inodeid_by_name(const struct inode* source, const char* name)
             fs_read_int32t(clstr_direct, sizeof(int32_t), sb.count_links);
             links = get_count_links(clstr_direct);
 
-            // item found
-            if ((id = get_itemid_by_name(name, clstr_direct, links)) != RETURN_FAILURE) {
+            // name found
+            if ((ret = search_cluster(key, name, id, clstr_direct, links)) != RETURN_FAILURE) {
                 break;
             }
         }
     }
 
-    return id;
+    if (key == Id_by_name && ret == RETURN_FAILURE) {
+        set_myerrno(Err_fs_error);
+        log_error("Unable to find name for id [%d]. Filesystem might be corrupted.", id);
+    }
+
+    return ret;
 }
 
 
@@ -259,11 +289,12 @@ static int32_t get_inodeid_by_name(const struct inode* source, const char* name)
  *  then function searches from root inode, else from actual inode, where user is.
  *  Inodes to final one are read and traversed folder by folder in path.
  *
- *  Returns id of the inode, if some was found, else 'RETURN_FAILURE'.
+ *  If inode was found, return 'RETURN_SUCCESS" in 'ret'.
  *
  */
 int32_t get_inode_by_path(struct inode* in_dest, const char* path) {
-    int32_t id = RETURN_FAILURE;
+    int32_t ret = RETURN_SUCCESS;
+    int32_t id = 0;
     char* dir = NULL;
     char path_copy[strlen(path) + 1];
 
@@ -288,127 +319,20 @@ int32_t get_inode_by_path(struct inode* in_dest, const char* path) {
     // parse path -- get rest of the directories, if there are any
     while (dir != NULL) {
         // get inode of first directory in given path
-        id = get_inodeid_by_name(in_dest, dir);
+        ret = search_links(Id_by_name, dir, &id, in_dest);
 
         // no item with parsed name found
-        if (id == RETURN_FAILURE) {
+        if (ret == RETURN_FAILURE) {
             set_myerrno(Err_item_not_exists);
             break;
         }
-            // still some elements to parse -- continue
+        // still some elements to parse -- continue
         else {
             fs_seek_set(sb.addr_inodes + id * sizeof(struct inode));
             fs_read_inode(in_dest, sizeof(struct inode), 1);
         }
 
         dir = strtok(NULL, SEPARATOR);
-    }
-
-    return id;
-}
-
-
-/******************************************************************************
- *
- * 	Get directory 'name' by its 'id' in cluster of directory items.
- * 	Name is copied to given 'name' variable.
- *
- *
- */
-static int32_t get_name_by_itemid(char* name, const int32_t id, const int32_t* links, const size_t size) {
-    int32_t ret = RETURN_FAILURE;
-
-    size_t i, j, items;
-
-    // array with directory items in cluster
-    struct directory_item cluster[sb.count_dir_items];
-
-    // check every link to cluster with directory items
-    for (i = 0; i < size; ++i) {
-        // other links are free
-        if (links[i] == FREE_LINK) {
-            continue;
-        }
-
-        // try to read maximum count in cluster -- only successful count of read elements is assigned
-        fs_seek_set(sb.addr_data + links[i] * sb.count_dir_items * sizeof(struct directory_item));
-        fs_read_directory_item(cluster, sizeof(struct directory_item), sb.count_dir_items);
-        items = get_count_dirs(cluster);
-
-        // loop over existing directory items
-        for (j = 0; j < items; ++j) {
-            if (cluster[j].fk_id_inode == id) {
-                strncpy(name, cluster[j].item_name, strlen(cluster[j].item_name) + 1);
-                ret = RETURN_SUCCESS;
-
-                break;
-            }
-        }
-
-        // inode name with 'id' found
-        if (id != RETURN_FAILURE) {
-            log_info("Got item name [%s] by id [%d].", name, id);
-
-            break;
-        }
-    }
-
-    return ret;
-}
-
-
-/******************************************************************************
- *
- *  Search directory 'name' in given 'source' inode by its 'id'.
- *
- */
-static int32_t get_name_by_inodeid(char* name, const struct inode* source, const int32_t id) {
-    int32_t ret = RETURN_FAILURE;
-    size_t i, links;
-
-    // cluster with direct links to be checked
-    int32_t clstr_direct[sb.count_links];
-    // cluster with indirect links to be checked
-    int32_t clstr_indirect[sb.count_links];
-
-    // first -- check direct links
-    ret = get_name_by_itemid(name, id, source->direct, COUNT_DIRECT_LINKS);
-
-    // second -- check indirect links of 1st level
-    // note: if count of indirect links lvl 1 needs to be bigger than 1 in future, this `if` is needed to be in loop
-    if (source->indirect1[0] != FREE_LINK && ret == RETURN_FAILURE) {
-        // read whole cluster with 1st level indirect links to clusters with data
-        fs_seek_set(sb.addr_data + source->indirect1[0] * sb.count_links * sizeof(int32_t));
-        fs_read_int32t(clstr_direct, sizeof(int32_t), sb.count_links);
-        links = get_count_links(clstr_direct);
-
-        ret = get_name_by_itemid(name, id, clstr_direct, links);
-    }
-
-    // third -- check indirect links of 2nd level
-    // note: if count of indirect links lvl 2 needs to be bigger than 1 in future, this `if` is needed to be in loop
-    if (source->indirect2[0] != FREE_LINK && ret == RETURN_FAILURE) {
-        // read whole cluster with 2nd level indirect links to clusters with 1st level indirect links
-        fs_seek_set(sb.addr_data + source->indirect2[0] * sb.count_links * sizeof(int32_t));
-        fs_read_int32t(clstr_indirect, sizeof(int32_t), sb.count_links);
-        links = get_count_links(clstr_indirect);
-
-        // loop over each 2nd level indirect link to get clusters with 1st level indirect links
-        for (i = 0; i < links; ++i) {
-            fs_seek_set(sb.addr_data + clstr_indirect[i] * sb.count_links * sizeof(int32_t));
-            fs_read_int32t(clstr_direct, sizeof(int32_t), sb.count_links);
-            links = get_count_links(clstr_direct);
-
-            // name found
-            if ((ret = get_name_by_itemid(name, id, clstr_direct, links)) != RETURN_FAILURE) {
-                break;
-            }
-        }
-    }
-
-    if (ret == RETURN_FAILURE) {
-        set_myerrno(Err_fs_error);
-        log_error("Unable to find name for id [%d]. Filesystem might be corrupted.", id);
     }
 
     return ret;
@@ -418,6 +342,10 @@ static int32_t get_name_by_inodeid(char* name, const struct inode* source, const
 /******************************************************************************
  *
  * 	Get path from root to actual inode by going back from it to root over parents.
+ * 	Cache child inode and get if of its parent. Then cache parent inode
+ * 	and get name of its child. After retrieving name of child, append it to final
+ * 	path with preceding separator.
+ * 	If path would be too long for pwd, write at the beginning "..", instead of rest of path.
  *
  */
 int32_t get_path_to_root(char* dest_path, const uint16_t length_new_path, bool* is_overflowed) {
@@ -446,23 +374,19 @@ int32_t get_path_to_root(char* dest_path, const uint16_t length_new_path, bool* 
         fs_read_inode(&in_tmp, sizeof(struct inode), 1);
 
         // get id of parent inode
-        id_parent = get_inodeid_by_name(&in_tmp, "..");
+        search_links(Id_by_name, "..", &id_parent, &in_tmp);
 
         // cache parent inode
         fs_seek_set(sb.addr_inodes + id_parent * sizeof(struct inode));
         fs_read_inode(&in_tmp, sizeof(struct inode), 1);
 
         // get name of child inode
-        if (get_name_by_inodeid(child_name, &in_tmp, id_child) == RETURN_FAILURE) {
+        if (search_links(Name_by_id, child_name, &id_child, &in_tmp) == RETURN_FAILURE) {
             ret = RETURN_FAILURE;
             break;
         }
 
         child_name_length = strlen(child_name);
-
-        if (strlen(child_name) == 0) {
-            continue;
-        }
 
         // write child name and separator to path
         if (size_used - (child_name_length + 1) > 1) {

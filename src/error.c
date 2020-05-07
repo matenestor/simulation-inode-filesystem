@@ -131,7 +131,7 @@ char* my_strerror(const enum __error err) {
             break;
 
         case Err_fs_error:
-            strcpy(err_str, "Filesystem internal error.");
+            strcpy(err_str, "Filesystem internal error. Try to use command 'fsck'.");
             break;
 
         default:

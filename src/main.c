@@ -74,6 +74,7 @@ int main(int argc, char const **argv) {
     #if DEBUG
     // Clion debugger output
     setbuf(stdout, 0);
+    setbuf(stderr, 0);
     #endif
 
     int status_exit = RETURN_SUCCESS;
