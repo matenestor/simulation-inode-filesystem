@@ -91,7 +91,32 @@ static void run() {
 
             // after filesystem is formatted, all commands are allowed
             else if (is_formatted) {
-                if (strcmp(command, CMD_CP) == 0) {
+                if (strcmp(command, CMD_MKDIR) == 0) {
+                    if (mkdir_(arg1) == RETURN_FAILURE) {
+                        my_perror(CMD_MKDIR);
+                        reset_myerrno();
+                    }
+                }
+
+                else if (strcmp(command, CMD_LS) == 0) {
+                    if (ls_(arg1) == RETURN_FAILURE) {
+                        my_perror(CMD_LS);
+                        reset_myerrno();
+                    }
+                }
+
+                else if (strcmp(command, CMD_PWD) == 0) {
+                    pwd_();
+                }
+
+                else if (strcmp(command, CMD_CD) == 0) {
+                    if (cd_(arg1) == RETURN_FAILURE) {
+                        my_perror(CMD_CD);
+                        reset_myerrno();
+                    }
+                }
+
+                else if (strcmp(command, CMD_CP) == 0) {
                     cp_(arg1, arg2);
                 }
 
@@ -103,34 +128,12 @@ static void run() {
                     rm_(arg1);
                 }
 
-                else if (strcmp(command, CMD_MKDIR) == 0) {
-                    if (mkdir_(arg1) == RETURN_FAILURE) {
-                        my_perror(CMD_MKDIR);
-                        reset_myerrno();
-                    }
-                }
-
                 else if (strcmp(command, CMD_RMDIR) == 0) {
                     rmdir_(arg1);
                 }
 
-                else if (strcmp(command, CMD_LS) == 0) {
-                    if (ls_(arg1) == RETURN_FAILURE) {
-                        my_perror(CMD_LS);
-                        reset_myerrno();
-                    }
-                }
-
                 else if (strcmp(command, CMD_CAT) == 0) {
                     cat_(arg1);
-                }
-
-                else if (strcmp(command, CMD_CD) == 0) {
-                    cd_(arg1);
-                }
-
-                else if (strcmp(command, CMD_PWD) == 0) {
-                    pwd_();
                 }
 
                 else if (strcmp(command, CMD_INFO) == 0) {
@@ -247,12 +250,6 @@ int rmdir_(const char* arg1) {
 
 
 int cat_(const char* arg1) {
-    int ret = RETURN_FAILURE;
-    return ret;
-}
-
-
-int cd_(const char* arg1) {
     int ret = RETURN_FAILURE;
     return ret;
 }

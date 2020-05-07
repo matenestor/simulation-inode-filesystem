@@ -20,4 +20,4 @@ add_executable(KIV_ZOS_sp
         src/commands/format.c src/commands/format.h
         src/commands/ls.c
         src/commands/mkdir.c
-        src/commands/pwd.c src/inc/fs_prompt.h)
+        src/commands/pwd.c src/inc/fs_prompt.h src/commands/cd.c)

@@ -12,13 +12,13 @@
 
 /******************************************************************************
  *
- * 	Remove separators of directories form end of given path.
+ * 	Remove separators of directories from end of given path.
  *
  */
-static int remove_end_separators(char* path) {
+int remove_end_separators(char* path) {
     char* p_path = NULL;
 
-    if (strlen(path) > 0) {
+    if (strlen(path) > 1) {
         p_path = path + strlen(path) - 1;
 
         // remove all SEPARATORs in the end

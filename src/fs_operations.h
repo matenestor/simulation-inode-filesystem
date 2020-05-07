@@ -23,6 +23,7 @@ unsigned int fs_write_bool(const bool*, size_t, size_t);
 unsigned int fs_write_char(char*, size_t, size_t);
 
 int32_t get_inode_by_path(struct inode*, const char*);
+int32_t get_path_to_root(char*, const uint16_t, bool*);
 int32_t create_inode(struct inode*, enum item, int32_t);
 
 int32_t get_link(struct inode*);

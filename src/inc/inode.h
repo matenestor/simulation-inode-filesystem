@@ -46,13 +46,16 @@ struct superblock {
 };
 
 struct inode {
-    // meta
     int32_t id_inode;                           // i-node id
     enum item item_type;                        // type of item in filesystem
     int32_t file_size;                          // size of file
     int32_t direct[COUNT_DIRECT_LINKS];         // direct links
     int32_t indirect1[COUNT_INDIRECT_LINKS_1];  // indirect links level 1 (pointer-data)
+                                                //  note: in some functions in fs_operations.c,
+                                                //   the code uses only first link
     int32_t indirect2[COUNT_INDIRECT_LINKS_2];  // indirect links level 2 (pointer-pointer-data)
+                                                //  note: in some functions in fs_operations.c,
+                                                //   the code uses only first link
 };
 
 struct directory_item {

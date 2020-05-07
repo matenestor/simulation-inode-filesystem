@@ -115,8 +115,8 @@ static int init_superblock(const int size, const size_t clstr_cnt) {
     sb.disk_size = size;
     sb.cluster_size = FS_CLUSTER_SIZE;
     sb.cluster_count = clstr_cnt;
-	sb.count_links = sb.cluster_size / sizeof(int32_t);
-	sb.count_dir_items = sb.cluster_size / sizeof(struct directory_item);
+    sb.count_links = sb.cluster_size / sizeof(int32_t);
+    sb.count_dir_items = sb.cluster_size / sizeof(struct directory_item);
     sb.addr_bm_inodes = addr_bm_in;
     sb.addr_bm_data = addr_bm_dat;
     sb.addr_inodes = addr_in;
@@ -125,7 +125,7 @@ static int init_superblock(const int size, const size_t clstr_cnt) {
     // write superblock to file
     fs_write_superblock(&sb, sizeof(struct superblock), 1);
 
-	fs_flush();
+    fs_flush();
 
     return RETURN_SUCCESS;
 }
@@ -141,7 +141,7 @@ static int init_bitmap(const size_t clstr_cnt) {
 
     fs_write_bool(bitmap, sizeof(bool), clstr_cnt);
 
-	fs_flush();
+    fs_flush();
 
     return RETURN_SUCCESS;
 }
@@ -195,7 +195,7 @@ static int init_inodes(const size_t clstr_cnt) {
 
     fs_flush();
 
-	return RETURN_SUCCESS;
+    return RETURN_SUCCESS;
 }
 
 
@@ -216,7 +216,7 @@ static int init_clusters(const size_t fs_size) {
     // fill zeros left till very end of filesystem
     fs_write_char(zeros, sizeof(char), diff % CACHE_SIZE);
 
-	fs_flush();
+    fs_flush();
 
     return RETURN_SUCCESS;
 }
@@ -229,7 +229,6 @@ static int init_root_dir() {
     // init directories in root directory (fk_id_inode is already set to 0 by init)
     strncpy(di[0].item_name, ".", 1);
     strncpy(di[1].item_name, "..", 2);
-    strncpy(di[2].item_name, "/", 1); // TODO necessary?
 
     // write root directory items to file
     fs_seek_set(sb.addr_data);

@@ -80,7 +80,7 @@ int ls_(const char* path) {
     log_info("ls: [%s]", path);
 
     // no path given -- list actual directory
-    if (strcmp(path, "") == 0) {
+    if (strlen(path) == 0) {
         memcpy(&in_tmp, &in_actual, sizeof(struct inode));
     }
     // else get last inode in path

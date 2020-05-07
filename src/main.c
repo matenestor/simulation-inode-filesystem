@@ -71,6 +71,11 @@ int parse_fsname(char* fsn, const char* arg_name) {
 
 
 int main(int argc, char const **argv) {
+    #if DEBUG
+    // Clion debugger output
+    setbuf(stdout, 0);
+    #endif
+
     int status_exit = RETURN_SUCCESS;
 
     // name of filesystem given by user

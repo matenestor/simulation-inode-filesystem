@@ -73,7 +73,7 @@ int mkdir_(const char* path) {
 
     if (strlen(path) > 0) {
 		// get name -- last element in path
-		if (parse_name(dir_name, path, STRLEN_ITEM_NAME) != RETURN_FAILURE) {
+        if (parse_name(dir_name, path, STRLEN_ITEM_NAME) != RETURN_FAILURE) {
             // check if it is possible to make new directory
             if (is_mkdir_possible(path, path_parent)) {
                 // get parent inode, where new directory should be created in
@@ -105,7 +105,7 @@ int mkdir_(const char* path) {
                     }
                 }
             }
-		}
+        }
     }
     else {
         set_myerrno(Err_arg_missing_operand);
