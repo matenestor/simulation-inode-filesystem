@@ -12,7 +12,7 @@
 
 /******************************************************************************
  *
- * 	Remove separators of directories from end of given path.
+ *  Remove separators of directories from end of given path.
  *
  */
 int remove_end_separators(char* path) {
@@ -34,7 +34,7 @@ int remove_end_separators(char* path) {
 
 /******************************************************************************
  *
- * 	Parse name of last directory in given path.
+ *  Parse name of last directory in given path.
  *
  */
 int parse_name(char* name, const char* path, const size_t length) {
@@ -75,7 +75,7 @@ int parse_name(char* name, const char* path, const size_t length) {
 
 /******************************************************************************
  *
- * 	Parse path to last element in given path. Everything except the last element.
+ *  Parse path to last element in given path. Everything except the last element.
  *
  */
 int parse_parent_path(char* parent_path, const char* path) {
@@ -113,7 +113,7 @@ int parse_parent_path(char* parent_path, const char* path) {
 
 /******************************************************************************
  *
- * 	Get count of links in indirect links cluster.
+ *  Get count of links in indirect links cluster.
  *
  */
 size_t get_count_links(int32_t* source) {

@@ -27,12 +27,12 @@ void signal_handler(int signum) {
 
 /******************************************************************************
  *
- * 	Copy filename, given as argument of program, to program buffer.
+ *  Copy filename, given as argument of program, to program buffer.
  *  Available are only letters, numbers, dots, underscores
  *  and slashes of total length of 'STRLEN_FSNAME'.
  *
- * 	On success, 0 is returned.
- * 	On error, -1 is returned, and my_errno is set appropriately.
+ *  On success, 0 is returned.
+ *  On error, -1 is returned, and my_errno is set appropriately.
  *
  */
 int parse_fsname(char* fsn, const char* arg_name) {

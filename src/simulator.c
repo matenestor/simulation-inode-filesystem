@@ -49,11 +49,11 @@ static int handle_input(char* command, char* arg1, char* arg2) {
 
 /******************************************************************************
  *
- * 	In simulation cycle handles input from user, if in correct form,
- * 	function checks if given command is known and calls it.
- * 	If filesystem was not formatted yet, user is allowed to use only
- * 	'format', 'help' and 'exit' commands. After formatting, user may use
- * 	all other commands.
+ *  In simulation cycle handles input from user, if in correct form,
+ *  function checks if given command is known and calls it.
+ *  If filesystem was not formatted yet, user is allowed to use only
+ *  'format', 'help' and 'exit' commands. After formatting, user may use
+ *  all other commands.
  *
  */
 static void run() {
@@ -180,8 +180,8 @@ static void run() {
 
 /******************************************************************************
  *
- * 	If simulation is successfully initialized, then function runs it.
- * 	Else terminates with error.
+ *  If simulation is successfully initialized, then function runs it.
+ *  Else terminates with error.
  *
  */
 int init_simulation(const char* fsn) {

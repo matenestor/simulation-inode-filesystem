@@ -85,8 +85,8 @@ unsigned int fs_write_char(const char* buffer, const size_t size, const size_t c
 
 /******************************************************************************
  *
- * 	Load a file with filesystem, if it exists. Read superblock, first inode and set 'is_formatted' to 'true'.
- * 	If filesystem with given name does not exists, tell user about possible formatting.
+ *  Load a file with filesystem, if it exists. Read superblock, first inode and set 'is_formatted' to 'true'.
+ *  If filesystem with given name does not exists, tell user about possible formatting.
  *
  */
 int init_filesystem(bool* is_formatted) {
@@ -132,7 +132,7 @@ int init_filesystem(bool* is_formatted) {
 
 /******************************************************************************
  *
- * 	Close filesystem binary file.
+ *  Close filesystem binary file.
  *
  */
 void close_filesystem() {
@@ -157,12 +157,12 @@ void close_filesystem() {
  *  function returns 'RETURN_SUCCESS'.
  *
  *  'key'   -- Determines if function searches for 'name', or 'id' in 'source'.
- * 	'name'  -- When function searches for 'name', it is buffer, where result will be stored.
- * 	           If function searches for 'id', it is const string, which is searched with.
- * 	'id'    -- When function searches for 'name', it is const int, which is searched with.
- * 	           If function searches for 'id', it is variable, where result will be stored.
- * 	'links' -- Cluster with direct links pointing to clusters with directory items, which will be checked.
- * 	'links_count' -- Count of links in 'links' cluster,
+ *  'name'  -- When function searches for 'name', it is buffer, where result will be stored.
+ *             If function searches for 'id', it is const string, which is searched with.
+ *  'id'    -- When function searches for 'name', it is const int, which is searched with.
+ *             If function searches for 'id', it is variable, where result will be stored.
+ *  'links' -- Cluster with direct links pointing to clusters with directory items, which will be checked.
+ *  'links_count' -- Count of links in 'links' cluster,
  *
  */
 static int32_t search_cluster(const enum search_by key, char* name, int32_t* id, const int32_t* links, const size_t links_count) {
@@ -217,17 +217,17 @@ static int32_t search_cluster(const enum search_by key, char* name, int32_t* id,
 
 /******************************************************************************
  *
- * 	Function checks every available link in given inode 'source'.
- * 	Start with direct links, and continue with indirect links level 1 and level 2, if nothing was found.
- * 	It reads every cluster with direct links and then call s function 'search_cluster(...)',
- * 	where the cluster and variables are finally processed.
+ *  Function checks every available link in given inode 'source'.
+ *  Start with direct links, and continue with indirect links level 1 and level 2, if nothing was found.
+ *  It reads every cluster with direct links and then call s function 'search_cluster(...)',
+ *  where the cluster and variables are finally processed.
  *
- * 	'key'    -- Determines if function checks for 'name', or 'id' in 'source'.
- * 	'name'   -- When function checks for 'name', it is buffer, where result will be stored.
- * 	            If function checks for 'id', it is const string, which is checked with.
- * 	'id'     -- When function checks for 'name', it is const int, which is checked with.
- * 	            If function checks for 'id', it is variable, where result will be stored.
- * 	'source' -- Inode, which is being checked.
+ *  'key'    -- Determines if function checks for 'name', or 'id' in 'source'.
+ *  'name'   -- When function checks for 'name', it is buffer, where result will be stored.
+ *              If function checks for 'id', it is const string, which is checked with.
+ *  'id'     -- When function checks for 'name', it is const int, which is checked with.
+ *              If function checks for 'id', it is variable, where result will be stored.
+ *  'source' -- Inode, which is being checked.
  *
  */
 static int32_t search_links(const enum search_by key, char* name, int32_t* id, const struct inode* source) {
@@ -285,7 +285,7 @@ static int32_t search_links(const enum search_by key, char* name, int32_t* id, c
 
 /******************************************************************************
  *
- *  Reads inode to 'in_dest' by given path. If path starts with "/", 
+ *  Reads inode to 'in_dest' by given path. If path starts with "/",
  *  then function searches from root inode, else from actual inode, where user is.
  *  Inodes to final one are read and traversed folder by folder in path.
  *
@@ -341,11 +341,11 @@ int32_t get_inode_by_path(struct inode* in_dest, const char* path) {
 
 /******************************************************************************
  *
- * 	Get path from root to actual inode by going back from it to root over parents.
- * 	Cache child inode and get if of its parent. Then cache parent inode
- * 	and get name of its child. After retrieving name of child, append it to final
- * 	path with preceding separator.
- * 	If path would be too long for pwd, write at the beginning "..", instead of rest of path.
+ *  Get path from root to actual inode by going back from it to root over parents.
+ *  Cache child inode and get if of its parent. Then cache parent inode
+ *  and get name of its child. After retrieving name of child, append it to final
+ *  path with preceding separator.
+ *  If path would be too long for pwd, write at the beginning "..", instead of rest of path.
  *
  */
 int32_t get_path_to_root(char* dest_path, const uint16_t length_new_path, bool* is_overflowed) {
@@ -466,15 +466,15 @@ static void bitmap_field_on(const int32_t address, const int32_t index) {
  *
  */
 static int32_t get_empty_bitmap_field(const int32_t address) {
-	size_t i, j, items;
-	size_t index = RETURN_FAILURE;
+    size_t i, j, items;
+    size_t index = RETURN_FAILURE;
     // count of all available field to check
-	int counter = sb.cluster_count;
-	bool bitmap[CACHE_SIZE] = {0};
+    int counter = sb.cluster_count;
+    bool bitmap[CACHE_SIZE] = {0};
 
-	for (i = 0; i < sb.cluster_count; i += CACHE_SIZE) {
-		// cache part of bitmap
-		fs_seek_set(address + i);
+    for (i = 0; i < sb.cluster_count; i += CACHE_SIZE) {
+        // cache part of bitmap
+        fs_seek_set(address + i);
 
         // check if there is available more fields that CACHE_SIZE
         if (counter - CACHE_SIZE >= 0) {
@@ -486,47 +486,47 @@ static int32_t get_empty_bitmap_field(const int32_t address) {
             items = fs_read_bool(bitmap, sizeof(bool), counter);
         }
 
-		// check cached array for a free field
-		for (j = 0; j < items; ++j) {
-			// check if field is free
-			if (bitmap[j]) {
-				// position of field in whole bitmap
-				index = i * CACHE_SIZE + j;
+        // check cached array for a free field
+        for (j = 0; j < items; ++j) {
+            // check if field is free
+            if (bitmap[j]) {
+                // position of field in whole bitmap
+                index = i * CACHE_SIZE + j;
                 // turn off the index
                 bitmap_field_off(address, index);
 
                 break;
-			}
-		}
+            }
+        }
 
-		// if free field was found, break
-		if (index != RETURN_FAILURE) {
-			log_info("Free cluster, type: [%s], index: [%d].", address == sb.addr_bm_inodes ? "inodes" : "data", index);
+        // if free field was found, break
+        if (index != RETURN_FAILURE) {
+            log_info("Free cluster, type: [%s], index: [%d].", address == sb.addr_bm_inodes ? "inodes" : "data", index);
 
-			break;
-		}
-	}
+            break;
+        }
+    }
 
-	// no more free inodes/data clusters
-	if (index == RETURN_FAILURE) {
-		if (address == sb.addr_bm_inodes) {
-			set_myerrno(Err_inode_no_inodes);
+    // no more free inodes/data clusters
+    if (index == RETURN_FAILURE) {
+        if (address == sb.addr_bm_inodes) {
+            set_myerrno(Err_inode_no_inodes);
 
-			log_error("Out of inodes.");
-		}
-		else if (address == sb.addr_bm_data) {
-			set_myerrno(Err_cluster_no_clusters);
+            log_error("Out of inodes.");
+        }
+        else if (address == sb.addr_bm_data) {
+            set_myerrno(Err_cluster_no_clusters);
 
-			log_error("Out of data clusters.");
-		}
-		else {
+            log_error("Out of data clusters.");
+        }
+        else {
             set_myerrno(Err_fs_error);
 
             log_error("Unknown address [%d]. Filesystem might be corrupted.", address);
         }
-	}
+    }
 
-	return index;
+    return index;
 }
 
 // END: Filesystem bitmap managing functions.
@@ -547,33 +547,33 @@ static int32_t get_empty_bitmap_field(const int32_t address) {
 int32_t create_inode(struct inode* new_inode, const enum item type, const int32_t id_parent) {
     int32_t ret = RETURN_FAILURE;
     // id of new inode, which will be used
-	int32_t id_free_inode = RETURN_FAILURE;
+    int32_t id_free_inode = RETURN_FAILURE;
     // id of new cluster, which will be used for the inode
-	int32_t id_free_cluster = RETURN_FAILURE;
-	// directory item record, in case new inode is for directory
-	struct directory_item new_dir_item[2] = {0};
+    int32_t id_free_cluster = RETURN_FAILURE;
+    // directory item record, in case new inode is for directory
+    struct directory_item new_dir_item[2] = {0};
 
-	// find free field for inode, which is also id of the inode
-	id_free_inode = get_empty_bitmap_field(sb.addr_bm_inodes);
-	// find free field for link of the inode
-	id_free_cluster = get_empty_bitmap_field(sb.addr_bm_data);
+    // find free field for inode, which is also id of the inode
+    id_free_inode = get_empty_bitmap_field(sb.addr_bm_inodes);
+    // find free field for link of the inode
+    id_free_cluster = get_empty_bitmap_field(sb.addr_bm_data);
 
-	// if there is free inode and data cluster for it, use it
-	if (!(id_free_inode == RETURN_FAILURE || id_free_cluster == RETURN_FAILURE)) {
-		// cache the free inode, in order to init it
-		fs_seek_set(sb.addr_inodes + id_free_inode * sizeof(struct inode));
-		fs_read_inode(new_inode, sizeof(struct inode), 1);
+    // if there is free inode and data cluster for it, use it
+    if (!(id_free_inode == RETURN_FAILURE || id_free_cluster == RETURN_FAILURE)) {
+        // cache the free inode, in order to init it
+        fs_seek_set(sb.addr_inodes + id_free_inode * sizeof(struct inode));
+        fs_read_inode(new_inode, sizeof(struct inode), 1);
 
-		// init new inode
-		new_inode->item_type = type;
-		new_inode->direct[0] = id_free_cluster;
+        // init new inode
+        new_inode->item_type = type;
+        new_inode->direct[0] = id_free_cluster;
 
-		if (type == Itemtype_directory) {
-			new_inode->file_size = sb.cluster_size;
+        if (type == Itemtype_directory) {
+            new_inode->file_size = sb.cluster_size;
 
-			// create . directory
-			strcpy(new_dir_item[0].item_name, ".");
-			new_dir_item[0].fk_id_inode = id_free_inode;
+            // create . directory
+            strcpy(new_dir_item[0].item_name, ".");
+            new_dir_item[0].fk_id_inode = id_free_inode;
 
             // create .. directory
             strcpy(new_dir_item[1].item_name, "..");
@@ -582,24 +582,24 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
             fs_seek_set(sb.addr_data + id_free_cluster * sb.count_dir_items * sizeof(struct directory_item));
             fs_write_directory_item(new_dir_item, sizeof(struct directory_item), 2);
 
-			fs_flush();
-		}
+            fs_flush();
+        }
 
-		// write new updated inode
-		fs_seek_set(sb.addr_inodes + id_free_inode * sizeof(struct inode));
-		fs_write_inode(new_inode, sizeof(struct inode), 1);
+        // write new updated inode
+        fs_seek_set(sb.addr_inodes + id_free_inode * sizeof(struct inode));
+        fs_write_inode(new_inode, sizeof(struct inode), 1);
 
-		fs_flush();
+        fs_flush();
 
-		ret = id_free_inode;
+        ret = id_free_inode;
 
-		log_info("New inode created, type: [%s], id: [%d].", type == Itemtype_directory ? "directory" : "file", id_free_inode);
-	}
-	else {
-		log_error("Unable to create new inode.");
-	}
+        log_info("New inode created, type: [%s], id: [%d].", type == Itemtype_directory ? "directory" : "file", id_free_inode);
+    }
+    else {
+        log_error("Unable to create new inode.");
+    }
 
-	return ret;
+    return ret;
 }
 
 // END: Filesystem inode creation function.
@@ -617,7 +617,7 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
  *
  */
 static int32_t _init_link() {
-	return get_empty_bitmap_field(sb.addr_bm_data);
+    return get_empty_bitmap_field(sb.addr_bm_data);
 }
 
 
@@ -629,22 +629,22 @@ static int32_t _init_link() {
  *
  */
 static int32_t _init_cluster(int32_t address) {
-	int32_t free_index = RETURN_FAILURE;
-	int32_t cluster[sb.count_links];
+    int32_t free_index = RETURN_FAILURE;
+    int32_t cluster[sb.count_links];
 
-	if ((free_index = _init_link()) != RETURN_FAILURE) {
-		// init the cluster
-		memset(cluster, FREE_LINK, sb.count_links);
-		cluster[0] = free_index;
+    if ((free_index = _init_link()) != RETURN_FAILURE) {
+        // init the cluster
+        memset(cluster, FREE_LINK, sb.count_links);
+        cluster[0] = free_index;
 
         // write initialized cluster
         fs_seek_set(sb.addr_data + address * sb.count_links * sizeof(int32_t));
         fs_write_int32t(cluster, sizeof(int32_t), sb.count_links);
 
         fs_flush();
-	}
+    }
 
-	return free_index;
+    return free_index;
 }
 
 
@@ -677,7 +677,7 @@ static int32_t _clear_cluster(int32_t address) {
  *
  */
 static int32_t create_direct() {
-	return _init_link();
+    return _init_link();
 }
 
 
@@ -689,26 +689,26 @@ static int32_t create_direct() {
  *  
  */
 static int32_t create_indirect_1(int32_t* link) {
-	int ret = RETURN_FAILURE;
-	int32_t addr_cluster = RETURN_FAILURE;
-	int32_t addr_data = RETURN_FAILURE;
+    int ret = RETURN_FAILURE;
+    int32_t addr_cluster = RETURN_FAILURE;
+    int32_t addr_data = RETURN_FAILURE;
 
-	// init link to cluster of direct links
-	if ((addr_cluster = _init_link()) != RETURN_FAILURE) {
-		// init cluster with direct links (return value is first link
-		// with address to data cluster, or fail)
-		if ((addr_data = _init_cluster(addr_cluster)) != RETURN_FAILURE) {
+    // init link to cluster of direct links
+    if ((addr_cluster = _init_link()) != RETURN_FAILURE) {
+        // init cluster with direct links (return value is first link
+        // with address to data cluster, or fail)
+        if ((addr_data = _init_cluster(addr_cluster)) != RETURN_FAILURE) {
             *link = addr_cluster;
-			ret = addr_data;
-		}
-		// cluster was not initialized == no more free clusters,
-		// so turn on the cluster with direct links again
-		else {
-			bitmap_field_on(sb.addr_bm_data, addr_cluster);
-		}
-	}
+            ret = addr_data;
+        }
+        // cluster was not initialized == no more free clusters,
+        // so turn on the cluster with direct links again
+        else {
+            bitmap_field_on(sb.addr_bm_data, addr_cluster);
+        }
+    }
 
-	return ret;
+    return ret;
 }
 
 
@@ -720,10 +720,10 @@ static int32_t create_indirect_1(int32_t* link) {
  *  
  */
 static int32_t create_indirect_2(int32_t* link) {
-	int ret = RETURN_FAILURE;
-	int32_t addr_cluster_indir1 = RETURN_FAILURE;
-	int32_t addr_cluster_dir = RETURN_FAILURE;
-	int32_t addr_data = RETURN_FAILURE;
+    int ret = RETURN_FAILURE;
+    int32_t addr_cluster_indir1 = RETURN_FAILURE;
+    int32_t addr_cluster_dir = RETURN_FAILURE;
+    int32_t addr_data = RETURN_FAILURE;
 
     // init cluster of indirect links level 1
     if ((addr_cluster_dir = create_indirect_1(&addr_cluster_indir1)) != RETURN_FAILURE) {
@@ -742,7 +742,7 @@ static int32_t create_indirect_2(int32_t* link) {
         }
     }
 
-	return ret;
+    return ret;
 }
 
 
@@ -807,7 +807,7 @@ static bool is_cluster_full_links(const int32_t id_cluster) {
  *
  */
 int32_t get_link(struct inode* source) {
-	int32_t id_free_cluster = RETURN_FAILURE;
+    int32_t id_free_cluster = RETURN_FAILURE;
     size_t i;
     // flag for changes in 'inode', about changes in clusters takes care functions themselves
     bool is_new_link = false;

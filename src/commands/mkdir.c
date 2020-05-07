@@ -72,7 +72,7 @@ int mkdir_(const char* path) {
     parse_parent_path(path_parent, path);
 
     if (strlen(path) > 0) {
-		// get name -- last element in path
+        // get name -- last element in path
         if (parse_name(dir_name, path, STRLEN_ITEM_NAME) != RETURN_FAILURE) {
             // check if it is possible to make new directory
             if (is_mkdir_possible(path, path_parent)) {

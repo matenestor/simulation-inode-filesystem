@@ -37,9 +37,9 @@ struct superblock {
     int32_t disk_size;              // total size of filesystem in MB
     int32_t cluster_size;           // cluster size in data part of filesystem
     int32_t cluster_count;          // cluster count in data part of filesystem
-	size_t count_links;			    // maximum count of indirect links in cluster
-	size_t count_dir_items;			// maximum count of directory items in cluster
-	int32_t addr_bm_inodes;         // address of start of i-nodes bitmap
+    size_t count_links;             // maximum count of indirect links in cluster
+    size_t count_dir_items;	        // maximum count of directory items in cluster
+    int32_t addr_bm_inodes;         // address of start of i-nodes bitmap
     int32_t addr_bm_data;           // address of start of data bitmap
     int32_t addr_inodes;            // address of start of i-nodes
     int32_t addr_data;              // address of start of data
