@@ -89,15 +89,15 @@ unsigned int fs_write_char(const char* buffer, const size_t size, const size_t c
  *  If filesystem with given name does not exists, tell user about possible formatting.
  *
  */
-int init_filesystem(bool* is_formatted) {
+int init_filesystem(const char* fsp, bool* is_formatted) {
     int ret = RETURN_FAILURE;
 
-    log_info("Loading filesystem with name [%s].", fs_name);
+    log_info("Loading filesystem [%s].", fsp);
 
     // if filesystem exists, load it
-    if (access(fs_name, F_OK) == 0) {
+    if (access(fsp, F_OK) == 0) {
         // filesystem is ready to be loaded
-        if ((filesystem = fopen(fs_name, "rb+")) != NULL) {
+        if ((filesystem = fopen(fsp, "rb+")) != NULL) {
             // cache super block
             fs_read_superblock(&sb, sizeof(struct superblock), 1);
             // move to inodes location
@@ -109,7 +109,7 @@ int init_filesystem(bool* is_formatted) {
             *is_formatted = true;
             ret = RETURN_SUCCESS;
 
-            log_info("Filesystem [%s] loaded.", fs_name);
+            log_info("Filesystem [%s] loaded.", fsp);
         }
         // filesystem is ready to be loaded, but there was an system error
         else {
@@ -123,7 +123,7 @@ int init_filesystem(bool* is_formatted) {
         *is_formatted = false;
         ret = RETURN_SUCCESS;
 
-        log_info("Filesystem [%s] not found.", fs_name);
+        log_info("Filesystem [%s] not found.", fsp);
     }
 
     return ret;

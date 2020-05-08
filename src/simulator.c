@@ -3,6 +3,7 @@
 
 #include "simulator.h"
 #include "inc/return_codes.h"
+#include "utils.h"
 
 #include "inc/logger_api.h"
 #include "error.h"
@@ -184,32 +185,37 @@ static void run() {
  *  Else terminates with error.
  *
  */
-int init_simulation(const char* fsn) {
+int init_simulation(const char* fsp) {
     int status_simulation;
 
-    // cache filesystem name
-    strncpy(fs_name, fsn, strlen(fsn));
-    // create initial pwd
-    strncpy(buff_pwd, SEPARATOR, strlen(SEPARATOR));
-    // create prompt
-    snprintf(buff_prompt, BUFF_PROMPT_LENGTH, FORMAT_PROMPT, fs_name, buff_pwd);
+    if (parse_name(fs_name, fsp, STRLEN_FSNAME) == RETURN_SUCCESS) {
+        // create initial pwd
+        strncpy(buff_pwd, SEPARATOR, 1);
+        // create prompt
+        snprintf(buff_prompt, BUFF_PROMPT_LENGTH, FORMAT_PROMPT, fs_name, buff_pwd);
 
-    // if filesystem exists and was loaded successfully, or user was notified about
-    // possible formatting, prepare for simulation
-    if (init_filesystem(&is_formatted) == RETURN_SUCCESS) {
-        status_simulation = RETURN_SUCCESS;
-        is_running = true;
+        // if filesystem exists and was loaded successfully, or user was notified about
+        // possible formatting, prepare for simulation
+        if (init_filesystem(fsp, &is_formatted) == RETURN_SUCCESS) {
+            status_simulation = RETURN_SUCCESS;
+            is_running = true;
 
-        puts("Type 'help' for more information.");
+            puts("Type 'help' for more information.");
 
-        // run simulation
-        run();
+            // run simulation
+            run();
+        }
+        else {
+            status_simulation = RETURN_FAILURE;
+            is_running = false;
+
+            err_exit_msg();
+        }
     }
     else {
-        status_simulation = RETURN_FAILURE;
         is_running = false;
-
-        err_exit_msg();
+        status_simulation = RETURN_FAILURE;
+        fprintf(stderr, "Maximal length of filesystem name is %d characters!\n", STRLEN_FSNAME);
     }
 
     log_info("Simulation end.");

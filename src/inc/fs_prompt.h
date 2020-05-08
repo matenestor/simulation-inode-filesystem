@@ -3,6 +3,8 @@
 
 // max length of filesystem name
 #define STRLEN_FSNAME   32
+// max length of filesystem path
+#define STRLEN_FSPATH   1024
 // max. length of pwd in prompt
 #define STRLEN_PWD      64
 // buffer size of pwd

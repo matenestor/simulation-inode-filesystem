@@ -14,9 +14,11 @@
 
 #define PR_HELP  "Usage: inodes <filesystem-name>\n"
 
-#define isunscr(c)   ((c)==('_'))
-#define isdot(c)     ((c)==('.'))
-#define isslash(c)   ((c)==('/'))
+#define isdot(c)        ((c)==('.'))
+#define isdash(c)       ((c)==('-'))
+#define isunscr(c)      ((c)==('_'))
+#define isslashlin(c)   ((c)==('/'))
+#define isslashwin(c)   ((c)==('\\'))
 
 /** Simulation running status for signal handler. */
 extern bool is_running;

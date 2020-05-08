@@ -73,7 +73,7 @@ struct superblock sb = {0};
 /** Inode, where user currently is. */
 struct inode in_actual = {0};
 
-extern int init_filesystem(bool*);
+extern int init_filesystem(const char*, bool*);
 extern void close_filesystem();
 
 extern int cp_(const char*, const char*);

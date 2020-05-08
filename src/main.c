@@ -43,11 +43,17 @@ int parse_fsname(char* fsn, const char* arg_name) {
     size_t len = strlen(arg_name);
     size_t i;
 
-    if (len < STRLEN_FSNAME) {
+    if (len < STRLEN_FSPATH) {
         for (i = 0; i < len; ++i) {
             // not valid if char is not letter, number or underscore
-            if (!(isalnum(arg_name[i]) || isunscr(arg_name[i]) || isdot(arg_name[i]) || isslash(arg_name[i]))) {
-                fputs("Use only letters, numbers, dots and/or underscores!\n", stderr);
+            if (!(isalnum(arg_name[i])
+                  || isdot(arg_name[i])
+                  || isdash(arg_name[i])
+                  || isunscr(arg_name[i])
+                  || isslashlin(arg_name[i])
+                  || isslashwin(arg_name[i])))
+            {
+                fputs("Use only letters, numbers, dots, dashes and/or underscores!\n", stderr);
                 set_myerrno(Err_fs_name_invalid);
 
                 break;
@@ -62,7 +68,7 @@ int parse_fsname(char* fsn, const char* arg_name) {
         }
     }
     else {
-        fprintf(stderr, "Maximal length on name is %d characters!\n", STRLEN_FSNAME);
+        fprintf(stderr, "Maximal length of path is %d characters!\n", STRLEN_FSPATH);
         set_myerrno(Err_fs_name_long);
     }
 
@@ -80,7 +86,7 @@ int main(int argc, char const **argv) {
     int status_exit = RETURN_SUCCESS;
 
     // name of filesystem given by user
-    char fsn[STRLEN_FSNAME] = {0};
+    char fsn[STRLEN_FSPATH] = {0};
 
     // init logger and set level
     if (logger_init() == RETURN_SUCCESS) {
