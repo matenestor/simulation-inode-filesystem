@@ -183,7 +183,7 @@ static int32_t search_cluster(const enum search_by key, char* name, int32_t* id,
         }
 
         // try to read maximum count in cluster -- only successful count of read elements is assigned
-        fs_seek_set(sb.addr_data + links[i] * sb.count_dir_items * sizeof(struct directory_item));
+        fs_seek_set(sb.addr_data + links[i] * sb.cluster_size);
         fs_read_directory_item(cluster, sizeof(struct directory_item), sb.count_dir_items);
         items = get_count_dirs(cluster);
 
@@ -249,7 +249,7 @@ static int32_t search_links(const enum search_by key, char* name, int32_t* id, c
     // note: if count of indirect links lvl 1 needs to be bigger than 1 in future, this `if` is needed to be in loop
     if (source->indirect1[0] != FREE_LINK && ret == RETURN_FAILURE) {
         // read whole cluster with 1st level indirect links to clusters with data
-        fs_seek_set(sb.addr_data + source->indirect1[0] * sb.count_links * sizeof(int32_t));
+        fs_seek_set(sb.addr_data + source->indirect1[0] * sb.cluster_size);
         fs_read_int32t(clstr_direct, sizeof(int32_t), sb.count_links);
         links = get_count_links(clstr_direct);
 
@@ -260,13 +260,13 @@ static int32_t search_links(const enum search_by key, char* name, int32_t* id, c
     // note: if count of indirect links lvl 2 needs to be bigger than 1 in future, this `if` is needed to be in loop
     if (source->indirect2[0] != FREE_LINK && ret == RETURN_FAILURE) {
         // read whole cluster with 2nd level indirect links to clusters with 1st level indirect links
-        fs_seek_set(sb.addr_data + source->indirect2[0] * sb.count_links * sizeof(int32_t));
+        fs_seek_set(sb.addr_data + source->indirect2[0] * sb.cluster_size);
         fs_read_int32t(clstr_indirect, sizeof(int32_t), sb.count_links);
         links = get_count_links(clstr_indirect);
 
         // loop over each 2nd level indirect link to get clusters with 1st level indirect links
         for (i = 0; i < links; ++i) {
-            fs_seek_set(sb.addr_data + clstr_indirect[i] * sb.count_links * sizeof(int32_t));
+            fs_seek_set(sb.addr_data + clstr_indirect[i] * sb.cluster_size);
             fs_read_int32t(clstr_direct, sizeof(int32_t), sb.count_links);
             links = get_count_links(clstr_direct);
 
@@ -310,7 +310,7 @@ int32_t get_inode_by_path(struct inode* in_dest, const char* path) {
     }
     // track path from actual directory
     else {
-        fs_seek_set(sb.addr_inodes + sizeof(struct inode) * in_actual.id_inode);
+        fs_seek_set(sb.addr_inodes + in_actual.id_inode * sizeof(struct inode));
         fs_read_inode(in_dest, sizeof(struct inode), 1);
     }
 
@@ -574,7 +574,7 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
             strcpy(new_dir_item[1].item_name, "..");
             new_dir_item[1].fk_id_inode = id_parent;
 
-            fs_seek_set(sb.addr_data + id_free_cluster * sb.count_dir_items * sizeof(struct directory_item));
+            fs_seek_set(sb.addr_data + id_free_cluster * sb.cluster_size);
             fs_write_directory_item(new_dir_item, sizeof(struct directory_item), 2);
 
             fs_flush();
@@ -623,7 +623,7 @@ static int32_t _init_link() {
  *  Return index number of the cluster, or 'RETURN_FAILURE'.
  *
  */
-static int32_t _init_cluster(int32_t address) {
+static int32_t _init_cluster(int32_t id_cluster) {
     int32_t free_index = RETURN_FAILURE;
     int32_t cluster[sb.count_links];
 
@@ -633,7 +633,7 @@ static int32_t _init_cluster(int32_t address) {
         cluster[0] = free_index;
 
         // write initialized cluster
-        fs_seek_set(sb.addr_data + address * sb.count_links * sizeof(int32_t));
+        fs_seek_set(sb.addr_data + id_cluster * sb.cluster_size);
         fs_write_int32t(cluster, sizeof(int32_t), sb.count_links);
 
         fs_flush();
@@ -648,14 +648,14 @@ static int32_t _init_cluster(int32_t address) {
  *  Clear cluster of every data inside.
  *
  */
-static int32_t _clear_cluster(int32_t address) {
+static int32_t _clear_cluster(int32_t id_cluster) {
     char cluster[sb.cluster_size];
 
     // clear the cluster
     memset(cluster, '\0', sb.cluster_size);
 
     // write initialized cluster
-    fs_seek_set(sb.addr_data + address * sb.cluster_size * sizeof(char));
+    fs_seek_set(sb.addr_data + id_cluster * sb.cluster_size);
     fs_write_char(cluster, sizeof(char), sb.cluster_size);
 
     fs_flush();
@@ -685,21 +685,21 @@ static int32_t create_direct() {
  */
 static int32_t create_indirect_1(int32_t* link) {
     int ret = RETURN_FAILURE;
-    int32_t addr_cluster = RETURN_FAILURE;
-    int32_t addr_data = RETURN_FAILURE;
+    int32_t id_clst_direct = RETURN_FAILURE;
+    int32_t id_clst_data = RETURN_FAILURE;
 
     // init link to cluster of direct links
-    if ((addr_cluster = _init_link()) != RETURN_FAILURE) {
+    if ((id_clst_direct = _init_link()) != RETURN_FAILURE) {
         // init cluster with direct links (return value is first link
         // with address to data cluster, or fail)
-        if ((addr_data = _init_cluster(addr_cluster)) != RETURN_FAILURE) {
-            *link = addr_cluster;
-            ret = addr_data;
+        if ((id_clst_data = _init_cluster(id_clst_direct)) != RETURN_FAILURE) {
+            *link = id_clst_direct;
+            ret = id_clst_data;
         }
         // cluster was not initialized == no more free clusters,
         // so turn on the cluster with direct links again
         else {
-            bitmap_field_on(sb.addr_bm_data, addr_cluster);
+            bitmap_field_on(sb.addr_bm_data, id_clst_direct);
         }
     }
 
@@ -716,24 +716,24 @@ static int32_t create_indirect_1(int32_t* link) {
  */
 static int32_t create_indirect_2(int32_t* link) {
     int ret = RETURN_FAILURE;
-    int32_t addr_cluster_indir1 = RETURN_FAILURE;
-    int32_t addr_cluster_dir = RETURN_FAILURE;
-    int32_t addr_data = RETURN_FAILURE;
+    int32_t id_clst_indirect = RETURN_FAILURE;
+    int32_t id_clst_direct = RETURN_FAILURE;
+    int32_t id_clst_data = RETURN_FAILURE;
 
     // init cluster of indirect links level 1
-    if ((addr_cluster_dir = create_indirect_1(&addr_cluster_indir1)) != RETURN_FAILURE) {
+    if ((id_clst_direct = create_indirect_1(&id_clst_indirect)) != RETURN_FAILURE) {
         // init cluster with direct links (return value is first link
         // with address to data cluster, or fail)
-        if ((addr_data = _init_cluster(addr_cluster_dir)) != RETURN_FAILURE) {
-            *link = addr_cluster_indir1;
-            ret = addr_data;
+        if ((id_clst_data = _init_cluster(id_clst_direct)) != RETURN_FAILURE) {
+            *link = id_clst_indirect;
+            ret = id_clst_data;
         }
         // clusters were not initialized == no more free clusters, so clear cluster with indirect links
         // level 1 and turn on both clusters with indirect links level 1 and direct links again
         else {
-            _clear_cluster(addr_cluster_indir1);
-            bitmap_field_on(sb.addr_bm_data, addr_cluster_indir1);
-            bitmap_field_on(sb.addr_bm_data, addr_cluster_dir);
+            _clear_cluster(id_clst_indirect);
+            bitmap_field_on(sb.addr_bm_data, id_clst_indirect);
+            bitmap_field_on(sb.addr_bm_data, id_clst_direct);
         }
     }
 
@@ -756,7 +756,7 @@ static bool is_cluster_full_dirs(const int32_t id_cluster) {
     size_t items = 0;
     struct directory_item cluster[sb.count_dir_items];
 
-    fs_seek_set(sb.addr_data + id_cluster * sb.count_dir_items * sizeof(struct directory_item));
+    fs_seek_set(sb.addr_data + id_cluster * sb.cluster_size);
     fs_read_directory_item(cluster, sizeof(struct directory_item), sb.count_dir_items);
     items = get_count_dirs(cluster);
 
@@ -781,7 +781,7 @@ static bool is_cluster_full_links(const int32_t id_cluster) {
     size_t items = 0;
     int32_t cluster[sb.count_links];
 
-    fs_seek_set(sb.addr_data + id_cluster * sb.count_links * sizeof(int32_t));
+    fs_seek_set(sb.addr_data + id_cluster * sb.cluster_size);
     fs_read_int32t(cluster, sizeof(int32_t), sb.count_links);
     items = get_count_links(cluster);
 
