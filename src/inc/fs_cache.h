@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 /** Cache size for fwriting and freading data blocks of filesystem */
-#define CACHE_SIZE 8192
+#define CACHE_SIZE 131072
 
 extern FILE* filesystem;
 extern struct superblock sb;

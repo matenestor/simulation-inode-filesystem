@@ -49,6 +49,7 @@
 #define CMD_TREE     "tree"
 #define CMD_HELP     "help"
 #define CMD_EXIT     "exit"
+#define CMD_DEBUG    "debug"
 
 #define isoverflow(c)          ((c) != '\n' && (c) != '\0')
 #define BUFF_CLR(dest, count)  memset(dest, '\0', count)
@@ -92,5 +93,6 @@ extern int load_(const char*);
 extern int format_(const char*, const char*);
 extern int fsck_();
 extern int tree_(const char*);
+extern int debug_(const char*);
 
 #endif

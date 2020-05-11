@@ -74,7 +74,7 @@ static void run() {
                 if (format_(arg1, fs_name) == RETURN_FAILURE) {
                     my_perror(CMD_FORMAT);
                     reset_myerrno();
-                    log_error("Filesystem could not be formatted.");
+                    is_formatted = false;
                 }
                 else {
                     is_formatted = true;
@@ -159,6 +159,10 @@ static void run() {
 
                 else if (strcmp(command, CMD_TREE) == 0) {
                     tree_(arg1);
+                }
+
+                else if (strcmp(command, CMD_DEBUG) == 0) {
+                    debug_(arg1);
                 }
 
                 else {

@@ -16,12 +16,15 @@
 // ================================================================================================
 // START: Filesystem input/output functions.
 
-void fs_seek_set(const unsigned int offset) {
-    fseek(filesystem, (long) offset, SEEK_SET);
-}
-
-long int fs_tell() {
-    return ftell(filesystem);
+void fs_seek_set(uint32_t offset) {
+    if (offset > INT32_MAX) {
+        offset -= INT32_MAX;
+        fseek(filesystem, INT32_MAX, SEEK_SET);
+        fseek(filesystem, offset, SEEK_CUR);
+    }
+    else {
+        fseek(filesystem, offset, SEEK_SET);
+    }
 }
 
 void fs_flush() {
@@ -455,39 +458,31 @@ static void bitmap_field_on(const int32_t address, const int32_t index) {
 /******************************************************************************
  *
  *  Finds first empty field in bitmap on given address. (Either inodes or data clusters bitmap).
- *  This function has a counter for checking limit of fields to read. After each loop it decreases,
- *  if there is still more fields than CACHE_SIZE.
- *  Eg. when filesystem has 1 MB size, there is 921 clusters, thus 921 B fields. 
- *   With CACHE_SIZE bigger than that (currently 8192 B), it would read both bitmaps 
- *   and also completely different part of filesystem.
  *  If no field is available, error is set.
  * 
  *  Returns index number of empty bitmap field, or 'RETURN_FAILURE'.
  *
  */
 static int32_t get_empty_bitmap_field(const int32_t address) {
-    size_t i, j, items;
+    size_t i, j;
     size_t index = RETURN_FAILURE;
-    // count of all available field to check
-    int counter = sb.cluster_count;
-    bool bitmap[CACHE_SIZE] = {0};
+    size_t loops = sb.cluster_count / CACHE_SIZE;
+    size_t over_fields = sb.cluster_count % CACHE_SIZE;
+    // count of field to be read
+    size_t batch = loops > 0 ? CACHE_SIZE : over_fields;
+    bool bitmap[batch];
 
-    for (i = 0; i < sb.cluster_count; i += CACHE_SIZE) {
+    memset(bitmap, false, batch);
+
+    for (i = 0; i <= loops; ++i) {
+        batch = i < loops ? CACHE_SIZE : over_fields;
+
         // cache part of bitmap
-        fs_seek_set(address + i);
-
-        // check if there is available more fields that CACHE_SIZE
-        if (counter - CACHE_SIZE >= 0) {
-            items = fs_read_bool(bitmap, sizeof(bool), CACHE_SIZE);
-            counter -= CACHE_SIZE;
-        }
-        // if count of fields is less than size of CACHE_SIZE, read only what is remaining
-        else {
-            items = fs_read_bool(bitmap, sizeof(bool), counter);
-        }
+        fs_seek_set(address + i * CACHE_SIZE);
+        fs_read_bool(bitmap, sizeof(bool), batch);
 
         // check cached array for a free field
-        for (j = 0; j < items; ++j) {
+        for (j = 0; j < batch; ++j) {
             // check if field is free
             if (bitmap[j]) {
                 // position of field in whole bitmap
