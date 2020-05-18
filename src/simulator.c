@@ -117,6 +117,13 @@ static void run() {
                     }
                 }
 
+                else if (strcmp(command, CMD_INFO) == 0) {
+                    if (info_(arg1) == RETURN_FAILURE) {
+                        my_perror(CMD_INFO);
+                        reset_myerrno();
+                    }
+                }
+
                 else if (strcmp(command, CMD_CP) == 0) {
                     cp_(arg1, arg2);
                 }
@@ -135,10 +142,6 @@ static void run() {
 
                 else if (strcmp(command, CMD_CAT) == 0) {
                     cat_(arg1);
-                }
-
-                else if (strcmp(command, CMD_INFO) == 0) {
-                    info_(arg1);
                 }
 
                 else if (strcmp(command, CMD_INCP) == 0) {
@@ -260,12 +263,6 @@ int rmdir_(const char* arg1) {
 
 
 int cat_(const char* arg1) {
-    int ret = RETURN_FAILURE;
-    return ret;
-}
-
-
-int info_(const char* arg1) {
     int ret = RETURN_FAILURE;
     return ret;
 }
