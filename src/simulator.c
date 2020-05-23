@@ -9,6 +9,14 @@
 #include "error.h"
 
 
+static void init_prompt() {
+    // create initial pwd, 2 for null terminator also
+    strncpy(buff_pwd, SEPARATOR, 2);
+    // create prompt
+    snprintf(buff_prompt, BUFF_PROMPT_LENGTH, FORMAT_PROMPT, fs_name, buff_pwd);
+}
+
+
 /******************************************************************************
  *
  *  If EOF was not sent to console and input is in buffer range,
@@ -77,6 +85,7 @@ static void run() {
                     is_formatted = false;
                 }
                 else {
+                    init_prompt();
                     is_formatted = true;
                 }
             }
@@ -131,6 +140,20 @@ static void run() {
                     }
                 }
 
+                else if (strcmp(command, CMD_INCP) == 0) {
+                    if (incp_(arg1, arg2) == RETURN_FAILURE) {
+                        my_perror(CMD_INCP);
+                        reset_myerrno();
+                    }
+                }
+
+                else if (strcmp(command, CMD_OUTCP) == 0) {
+                    if (outcp_(arg1, arg2) == RETURN_FAILURE) {
+                        my_perror(CMD_OUTCP);
+                        reset_myerrno();
+                    }
+                }
+
                 else if (strcmp(command, CMD_CP) == 0) {
                     cp_(arg1, arg2);
                 }
@@ -146,15 +169,6 @@ static void run() {
                 else if (strcmp(command, CMD_CAT) == 0) {
                     cat_(arg1);
                 }
-
-                else if (strcmp(command, CMD_INCP) == 0) {
-                    incp_(arg1, arg2);
-                }
-
-                else if (strcmp(command, CMD_OUTCP) == 0) {
-                    outcp_(arg1, arg2);
-                }
-
                 else if (strcmp(command, CMD_LOAD) == 0) {
                     load_(arg1);
                 }
@@ -199,10 +213,7 @@ int init_simulation(const char* fsp) {
     int status_simulation;
 
     if (parse_name(fs_name, fsp, STRLEN_FSNAME) == RETURN_SUCCESS) {
-        // create initial pwd
-        strncpy(buff_pwd, SEPARATOR, 1);
-        // create prompt
-        snprintf(buff_prompt, BUFF_PROMPT_LENGTH, FORMAT_PROMPT, fs_name, buff_pwd);
+        init_prompt();
 
         // if filesystem exists and was loaded successfully, or user was notified about
         // possible formatting, prepare for simulation
@@ -240,7 +251,6 @@ int init_simulation(const char* fsp) {
 
 
 
-
 int cp_(const char* arg1, const char* arg2) {
     int ret = RETURN_FAILURE;
     return ret;
@@ -260,18 +270,6 @@ int rm_(const char* arg1) {
 
 
 int cat_(const char* arg1) {
-    int ret = RETURN_FAILURE;
-    return ret;
-}
-
-
-int incp_(const char* arg1, const char* arg2) {
-    int ret = RETURN_FAILURE;
-    return ret;
-}
-
-
-int outcp_(const char* arg1, const char* arg2) {
     int ret = RETURN_FAILURE;
     return ret;
 }

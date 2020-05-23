@@ -14,6 +14,24 @@
 #include "error.h"
 
 
+// prototypes of functions in this unit
+//static int32_t search_cluster_inodeid  (char*, int32_t*, int32_t*, size_t, int (*)(char*, int32_t*, const int32_t*, const size_t));
+//static int32_t search_cluster_inodename(char*, int32_t*, int32_t*, size_t, int (*)(char*, int32_t*, const int32_t*, const size_t));
+//static int32_t search_links(char*, int32_t*, const struct inode*, int (*)(char*, int32_t*, const int32_t*, const size_t));
+static void bitmap_field_off(int32_t, int32_t);
+static void bitmap_field_on(int32_t, int32_t);
+static int32_t get_empty_bitmap_field(int32_t);
+static int clear_inode_links(int32_t*, size_t);
+static int32_t _init_link();
+static int32_t _init_cluster(int32_t);
+static int32_t _clear_cluster(int32_t);
+static int32_t create_direct();
+static int32_t create_indirect_1(int32_t*);
+static int32_t create_indirect_2(int32_t*);
+static bool is_cluster_full_dirs(int32_t);
+static bool is_cluster_full_links(int32_t);
+
+
 // ================================================================================================
 // START: Filesystem input/output functions.
 
@@ -121,7 +139,7 @@ int init_filesystem(const char* fsp, bool* is_formatted) {
             *is_formatted = false;
         }
     }
-        // else notify about possible formatting
+    // else notify about possible formatting
     else {
         puts("No filesystem with this name found. You can format one with command 'format <size>'.");
         *is_formatted = false;
@@ -169,8 +187,8 @@ void close_filesystem() {
  *  'links_count' -- Count of links in 'links' cluster,
  *
  */
-static int32_t search_cluster(const enum search_by key, char* name, int32_t* id, const int32_t* links, const size_t links_count) {
-    int32_t ret = RETURN_FAILURE;
+static int search_cluster_inodeid(char* name, int32_t* id, const int32_t* links, const size_t links_count) {
+    int ret = RETURN_FAILURE;
     size_t i, j, items;
 
     // array with directory items in cluster
@@ -190,27 +208,51 @@ static int32_t search_cluster(const enum search_by key, char* name, int32_t* id,
 
         // loop over existing directory items
         for (j = 0; j < items; ++j) {
-            if (key == Id_by_name) {
-                // inode of directory item with name 'name' found
-                if (strcmp(name, cluster[j].item_name) == 0) {
-                    *id = cluster[j].fk_id_inode;
-                    ret = RETURN_SUCCESS;
+            // inode of directory item with name 'name' found
+            if (strcmp(name, cluster[j].item_name) == 0) {
+                *id = cluster[j].fk_id_inode;
+                ret = RETURN_SUCCESS;
 
-                    log_info("Got item id [%d] by name [%s].", *id, name);
+                log_info("Got item id [%d] by name [%s].", *id, name);
 
-                    break;
-                }
+                break;
             }
-            else if (key == Name_by_id) {
-                // inode name with 'id' found
-                if (cluster[j].fk_id_inode == *id) {
-                    strncpy(name, cluster[j].item_name, STRLEN_ITEM_NAME - 1);
-                    ret = RETURN_SUCCESS;
+        }
+    }
 
-                    log_info("Got item name [%s] by id [%d].", name, *id);
+    return ret;
+}
 
-                    break;
-                }
+
+static int search_cluster_inodename(char* name, int32_t* id, const int32_t* links, const size_t links_count) {
+    int ret = RETURN_FAILURE;
+    size_t i, j, items;
+
+    // array with directory items in cluster
+    struct directory_item cluster[sb.count_dir_items];
+
+    // check every link to cluster with directory items
+    for (i = 0; i < links_count; ++i) {
+        // other links are free
+        if (links[i] == FREE_LINK) {
+            continue;
+        }
+
+        // try to read maximum count in cluster -- only successful count of read elements is assigned
+        fs_seek_set(sb.addr_data + links[i] * sb.cluster_size);
+        fs_read_directory_item(cluster, sizeof(struct directory_item), sb.count_dir_items);
+        items = get_count_dirs(cluster);
+
+        // loop over existing directory items
+        for (j = 0; j < items; ++j) {
+            // inode name with 'id' found
+            if (cluster[j].fk_id_inode == *id) {
+                strncpy(name, cluster[j].item_name, STRLEN_ITEM_NAME - 1);
+                ret = RETURN_SUCCESS;
+
+                log_info("Got item name [%s] by id [%d].", name, *id);
+
+                break;
             }
         }
     }
@@ -234,7 +276,8 @@ static int32_t search_cluster(const enum search_by key, char* name, int32_t* id,
  *  'source' -- Inode, which is being checked.
  *
  */
-static int32_t search_links(const enum search_by key, char* name, int32_t* id, const struct inode* source) {
+static int32_t search_links(char* name, int32_t* id, const struct inode* source,
+                            int (*search_cluster)(char*, int32_t*, const int32_t*, const size_t)) {
     int32_t ret = RETURN_FAILURE;
     size_t i, links;
 
@@ -244,7 +287,7 @@ static int32_t search_links(const enum search_by key, char* name, int32_t* id, c
     int32_t clstr_indirect[sb.count_links];
 
     // first -- check direct links
-    ret = search_cluster(key, name, id, source->direct, COUNT_DIRECT_LINKS);
+    ret = search_cluster(name, id, source->direct, COUNT_DIRECT_LINKS);
 
     // second -- check indirect links of 1st level
     // note: if count of indirect links lvl 1 needs to be bigger than 1 in future, this `if` is needed to be in loop
@@ -254,7 +297,7 @@ static int32_t search_links(const enum search_by key, char* name, int32_t* id, c
         fs_read_int32t(clstr_direct, sizeof(int32_t), sb.count_links);
         links = get_count_links(clstr_direct);
 
-        ret = search_cluster(key, name, id, clstr_direct, links);
+        ret = search_cluster(name, id, clstr_direct, links);
     }
 
     // third -- check indirect links of 2nd level
@@ -272,15 +315,14 @@ static int32_t search_links(const enum search_by key, char* name, int32_t* id, c
             links = get_count_links(clstr_direct);
 
             // name found
-            if ((ret = search_cluster(key, name, id, clstr_direct, links)) != RETURN_FAILURE) {
+            if ((ret = search_cluster(name, id, clstr_direct, links)) != RETURN_FAILURE) {
                 break;
             }
         }
     }
 
-    if (key == Id_by_name && ret == RETURN_FAILURE) {
+    if (ret == RETURN_FAILURE) {
         set_myerrno(Err_fs_error);
-        log_error("Unable to find name for id [%d]. Filesystem might be corrupted.", id);
     }
 
     return ret;
@@ -323,7 +365,7 @@ int32_t get_inode_by_path(struct inode* in_dest, const char* path) {
     // parse path -- get rest of the directories, if there are any
     while (dir != NULL) {
         // get inode of first directory in given path
-        ret = search_links(Id_by_name, dir, &id, in_dest);
+        ret = search_links(dir, &id, in_dest, search_cluster_inodeid);
 
         // no item with parsed name found
         if (ret == RETURN_FAILURE) {
@@ -378,14 +420,14 @@ int32_t get_path_to_root(char* dest_path, const uint16_t length_new_path, bool* 
         fs_read_inode(&in_tmp, sizeof(struct inode), 1);
 
         // get id of parent inode
-        search_links(Id_by_name, "..", &id_parent, &in_tmp);
+        search_links("..", &id_parent, &in_tmp, search_cluster_inodeid);
 
         // cache parent inode
         fs_seek_set(sb.addr_inodes + id_parent * sizeof(struct inode));
         fs_read_inode(&in_tmp, sizeof(struct inode), 1);
 
         // get name of child inode
-        if (search_links(Name_by_id, child_name, &id_child, &in_tmp) == RETURN_FAILURE) {
+        if (search_links(child_name, &id_child, &in_tmp, search_cluster_inodename) == RETURN_FAILURE) {
             ret = RETURN_FAILURE;
             break;
         }
@@ -530,7 +572,7 @@ static int32_t get_empty_bitmap_field(const int32_t address) {
 
 
 // ================================================================================================
-// START: Filesystem inode creation function.
+// START: Filesystem inode creation and destruction functions.
 
 /******************************************************************************
  *
@@ -598,7 +640,71 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
     return ret;
 }
 
-// END: Filesystem inode creation function.
+
+static int clear_inode_links(int32_t* array, const size_t size) {
+    size_t i;
+
+    for (i = 0; i < size; ++i) {
+        if (array[i] != FREE_LINK) {
+            _clear_cluster(array[i]);
+            array[i] = FREE_LINK;
+        }
+    }
+
+    return 0;
+}
+
+
+/******************************************************************************
+ *
+ * 	Destroys given inode by resetting its values, turning on its bitmap field
+ * 	and deleting record from its parent's clusters.
+ *
+ */
+int destroy_inode(struct inode* old_inode) {
+    size_t i;
+    int32_t id_parent;
+    struct inode in_parent = {0};
+    struct directory_item cluster[sb.count_dir_items];
+
+    // delete record about the directory from its parent
+    if (old_inode->item_type == Itemtype_directory) {
+        // read first and only cluster with record
+        fs_seek_set(sb.addr_data + old_inode->direct[0] * sb.cluster_size);
+        fs_read_directory_item(cluster, sizeof(struct directory_item), sb.count_dir_items);
+
+        // ".." directory is on second place in records
+        id_parent = cluster[1].fk_id_inode;
+
+        // read parent inode
+        fs_seek_set(sb.addr_inodes + id_parent * sizeof(struct inode));
+        fs_read_inode(&in_parent, sizeof(struct inode), 1);
+
+        // todo find cluster where record for remove is saved
+
+    }
+
+    // reset attributes of inode
+    old_inode->item_type = Itemtype_free;
+    old_inode->file_size = 0;
+    clear_inode_links(old_inode->direct, COUNT_DIRECT_LINKS);
+    // todo this approach..
+    clear_inode_links(old_inode->indirect1, COUNT_INDIRECT_LINKS_1);
+    // todo ..and this approach are buggy -- deletes only first clusters in path,
+    //  so data clusters are left without parent
+    clear_inode_links(old_inode->indirect2, COUNT_INDIRECT_LINKS_2);
+
+    // write clear inode
+    fs_seek_set(sb.addr_inodes + old_inode->id_inode * sizeof(struct inode));
+    fs_write_inode(old_inode, sizeof(struct inode), 1);
+
+    // turn on its bitmap field
+    bitmap_field_on(sb.addr_bm_inodes, old_inode->id_inode);
+
+    return 0;
+}
+
+// END: Filesystem inode creation and destruction functions.
 // ================================================================================================
 
 
@@ -660,6 +766,8 @@ static int32_t _clear_cluster(int32_t id_cluster) {
     fs_write_char(cluster, sizeof(char), sb.cluster_size);
 
     fs_flush();
+
+    bitmap_field_on(sb.addr_bm_data, id_cluster);
 
     return 0;
 }

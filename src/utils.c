@@ -83,6 +83,7 @@ int parse_parent_path(char* parent_path, const char* path) {
     int ret = RETURN_FAILURE;
     char* last_sep = NULL;
     char buff[strlen(path) + 1];
+    size_t len = 0;
 
     if (strlen(path) > 0) {
         strncpy(buff, path, strlen(path) + 1);
@@ -95,8 +96,11 @@ int parse_parent_path(char* parent_path, const char* path) {
 
         // in path there is SEPARATOR
         if (last_sep != NULL) {
-            strncpy(parent_path, path, last_sep - path);
-            parent_path[last_sep - path] = '\0';
+            len = last_sep - path;
+            len = len == 0 ? len + 1 : len;
+
+            strncpy(parent_path, path, len);
+            parent_path[len] = '\0';
 
             ret = RETURN_SUCCESS;
 

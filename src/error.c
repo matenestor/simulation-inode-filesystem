@@ -82,16 +82,16 @@ char* my_strerror(const enum __error err) {
             strcpy(err_str, "filesystem size not provided");
             break;
 
-        case Err_arg_missing_operand:
-            strcpy(err_str, "missing operand");
-            break;
-
-        case Err_arg_missing_destination:
-            strcpy(err_str, "missing destination file operand");
+        case Err_arg_missing:
+            strcpy(err_str, "missing argument(s)");
             break;
 
         case Err_dir_not_empty:
             strcpy(err_str, "directory not empty");
+            break;
+
+        case Err_dir_arg_invalid:
+            strcpy(err_str, "invalid argument");
             break;
 
         case Err_dir_exists:

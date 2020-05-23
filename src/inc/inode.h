@@ -19,11 +19,6 @@
 /** Count of indirect links level 2 in inode. */
 #define COUNT_INDIRECT_LINKS_2 1
 
-// macros for finding out usage of inode
-#define isinfree(in) (in.item_type==Itemtype_free)
-#define isinfile(in) (in.item_type==Itemtype_file)
-#define isindirc(in) (in.item_type==Itemtype_directory)
-
 /** Types of items available in filesystem. */
 enum item {
     Itemtype_free,

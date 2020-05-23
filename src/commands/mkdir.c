@@ -103,13 +103,15 @@ int mkdir_(const char* path) {
 
                             ret = RETURN_SUCCESS;
                         }
+                        // TODO longterm:
+                        //  else delete the link for 'id_cluster' if it is empty
                     }
                 }
             }
         }
     }
     else {
-        set_myerrno(Err_arg_missing_operand);
+        set_myerrno(Err_arg_missing);
         log_warning("mkdir: unable to make directory [%s]", path);
     }
 

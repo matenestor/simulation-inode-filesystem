@@ -101,11 +101,11 @@ static void debug_inodes() {
         fs_read_inode(inodes, sizeof(struct inode), batch);
 
         for (j = 0; j < batch; ++j) {
-            if (isinfree(inodes[j]))
+            if (inodes[j].item_type == Itemtype_free)
                 ++inodes_free;
-            else if (isinfile(inodes[j]))
+            else if (inodes[j].item_type == Itemtype_file)
                 ++inodes_file;
-            else if (isindirc(inodes[j]))
+            else if (inodes[j].item_type == Itemtype_directory)
                 ++inodes_dirc;
         }
     }

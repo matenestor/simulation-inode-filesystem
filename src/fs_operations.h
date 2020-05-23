@@ -7,13 +7,6 @@
 #include "inc/inode.h"
 
 
-// I think I did something very wrong
-// with purpose of this enum probably,
-enum search_by {
-    Id_by_name,
-    Name_by_id
-};
-
 void fs_seek_set(uint32_t);
 void fs_flush();
 unsigned int fs_read_superblock(struct superblock*, size_t, size_t);
@@ -32,6 +25,7 @@ unsigned int fs_write_char(const char*, size_t, size_t);
 int32_t get_inode_by_path(struct inode*, const char*);
 int32_t get_path_to_root(char*, uint16_t, bool*);
 int32_t create_inode(struct inode*, enum item, int32_t);
+int destroy_inode(struct inode*);
 
 int32_t get_link(struct inode*);
 
