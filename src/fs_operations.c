@@ -173,16 +173,11 @@ void close_filesystem() {
 
 /******************************************************************************
  *
- *  Searches whole cluster with directory items. Function searches of either 'name' by 'id',
- *  or 'id' by 'name' in given inode 'source' in all links. What to search for is decided
- *  by given enum search_by 'key'. When variable, which is looked for, is found,
- *  function returns 'RETURN_SUCCESS'.
+ *  Searches whole cluster with directory items for 'id' of inode with 'name'.
+ *  When variable, which is looked for, is found, function returns 'RETURN_SUCCESS'.
  *
- *  'key'   -- Determines if function searches for 'name', or 'id' in 'source'.
- *  'name'  -- When function searches for 'name', it is buffer, where result will be stored.
- *             If function searches for 'id', it is const string, which is searched with.
- *  'id'    -- When function searches for 'name', it is const int, which is searched with.
- *             If function searches for 'id', it is variable, where result will be stored.
+ *  'name'  -- Name of inode, which 'id' is searched for.
+ *  'id'    -- Pointer to variable, where result will be stored.
  *  'links' -- Cluster with direct links pointing to clusters with directory items, which will be checked.
  *  'links_count' -- Count of links in 'links' cluster,
  *
@@ -224,6 +219,17 @@ static int search_cluster_inodeid(char* name, int32_t* id, const int32_t* links,
 }
 
 
+/******************************************************************************
+ *
+ *  Searches whole cluster with directory items for 'name' of inode with 'id'.
+ *  When variable, which is looked for, is found, function returns 'RETURN_SUCCESS'.
+ *
+ *  'name'  -- Name of inode; a variable, where result will be stored.
+ *  'id'    -- Id of inode, which is searched for.
+ *  'links' -- Cluster with direct links pointing to clusters with directory items, which will be checked.
+ *  'links_count' -- Count of links in 'links' cluster,
+ *
+ */
 static int search_cluster_inodename(char* name, int32_t* id, const int32_t* links, const size_t links_count) {
     int ret = RETURN_FAILURE;
     size_t i, j, items;
@@ -268,12 +274,10 @@ static int search_cluster_inodename(char* name, int32_t* id, const int32_t* link
  *  It reads every cluster with direct links and then call s function 'search_cluster(...)',
  *  where the cluster and variables are finally processed.
  *
- *  'key'    -- Determines if function checks for 'name', or 'id' in 'source'.
- *  'name'   -- When function checks for 'name', it is buffer, where result will be stored.
- *              If function checks for 'id', it is const string, which is checked with.
- *  'id'     -- When function checks for 'name', it is const int, which is checked with.
- *              If function checks for 'id', it is variable, where result will be stored.
+ *  'name'   -- name of inode, which is either searched for, or searched with
+ *  'id'     -- id of inode, which is either searched with, or searched for
  *  'source' -- Inode, which is being checked.
+ *  'search_cluster' -- pointer to function, which will be called for cluster searching
  *
  */
 static int32_t search_links(char* name, int32_t* id, const struct inode* source,
@@ -657,19 +661,18 @@ static int clear_inode_links(int32_t* array, const size_t size) {
 
 /******************************************************************************
  *
- * 	Destroys given inode by resetting its values, turning on its bitmap field
- * 	and deleting record from its parent's clusters.
+ * 	Destroys given inode by deleting record from its parent's clusters (if it is a directory),
+ * 	resetting its values, clearing clusters and links, and turning on its bitmap field.
  *
  */
 int destroy_inode(struct inode* old_inode) {
-    size_t i;
     int32_t id_parent;
     struct inode in_parent = {0};
     struct directory_item cluster[sb.count_dir_items];
 
     // delete record about the directory from its parent
     if (old_inode->item_type == Itemtype_directory) {
-        // read first and only cluster with record
+        // read first cluster with records (should be the only link, when inode to delete is a directory)
         fs_seek_set(sb.addr_data + old_inode->direct[0] * sb.cluster_size);
         fs_read_directory_item(cluster, sizeof(struct directory_item), sb.count_dir_items);
 
@@ -687,6 +690,7 @@ int destroy_inode(struct inode* old_inode) {
     // reset attributes of inode
     old_inode->item_type = Itemtype_free;
     old_inode->file_size = 0;
+
     clear_inode_links(old_inode->direct, COUNT_DIRECT_LINKS);
     // todo this approach..
     clear_inode_links(old_inode->indirect1, COUNT_INDIRECT_LINKS_1);
@@ -694,7 +698,7 @@ int destroy_inode(struct inode* old_inode) {
     //  so data clusters are left without parent
     clear_inode_links(old_inode->indirect2, COUNT_INDIRECT_LINKS_2);
 
-    // write clear inode
+    // write cleared inode
     fs_seek_set(sb.addr_inodes + old_inode->id_inode * sizeof(struct inode));
     fs_write_inode(old_inode, sizeof(struct inode), 1);
 
