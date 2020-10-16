@@ -194,5 +194,44 @@ int debug_(const char* detail) {
 
     puts("");
 
+//    size_t i;
+//    struct inode penis = {0};
+//    int32_t cluster[256];
+//    memset(cluster, -1, 256);
+//
+//    penis.id_inode = 1;
+//    penis.item_type = Itemtype_file;
+//
+//    for (i = 0; i < COUNT_DIRECT_LINKS; ++i) {
+//        penis.direct[i] = i+1;
+//    }
+//
+//    penis.indirect1[0] = 6;
+//    cluster[0] = 7; cluster[1] = 8; cluster[2] = 9;
+//
+//    fs_seek_set(sb.addr_data + 6 * sb.cluster_size);
+//    fs_write_int32t(cluster, sizeof(int32_t), 256);
+//
+//    penis.indirect2[0] = 10;
+//    cluster[0] = 11; cluster[1] = 12; cluster[2] = -1;
+//
+//    fs_seek_set(sb.addr_data + 10 * sb.cluster_size);
+//    fs_write_int32t(cluster, sizeof(int32_t), 256);
+//
+//
+//    cluster[0] = 13; cluster[1] = 14;
+//    fs_seek_set(sb.addr_data + 11 * sb.cluster_size);
+//    fs_write_int32t(cluster, sizeof(int32_t), 256);
+//
+//    cluster[0] = 15; cluster[1] = 16;
+//    fs_seek_set(sb.addr_data + 12 * sb.cluster_size);
+//    fs_write_int32t(cluster, sizeof(int32_t), 256);
+//
+//    fs_seek_set(sb.addr_inodes + penis.id_inode * sizeof(struct inode));
+//    fs_write_inode(&penis, sizeof(struct inode), 1);
+//    fs_flush();
+//
+//    destroy_inode(&penis);
+
     return 0;
 }

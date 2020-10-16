@@ -83,7 +83,7 @@ char* my_strerror(const enum __error err) {
             break;
 
         case Err_arg_missing:
-            strcpy(err_str, "missing argument(s)");
+            strcpy(err_str, "missing operand");
             break;
 
         case Err_dir_not_empty:

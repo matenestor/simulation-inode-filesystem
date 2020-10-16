@@ -135,7 +135,7 @@ static void run() {
 
                 else if (strcmp(command, CMD_RMDIR) == 0) {
                     if (rmdir_(arg1) == RETURN_FAILURE) {
-                        my_perror(CMD_RM);
+                        my_perror(CMD_RMDIR);
                         reset_myerrno();
                     }
                 }

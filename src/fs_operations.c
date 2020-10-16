@@ -15,19 +15,25 @@
 
 
 // prototypes of functions in this unit
-//static int32_t search_cluster_inodeid  (char*, int32_t*, int32_t*, size_t, int (*)(char*, int32_t*, const int32_t*, const size_t));
-//static int32_t search_cluster_inodename(char*, int32_t*, int32_t*, size_t, int (*)(char*, int32_t*, const int32_t*, const size_t));
-//static int32_t search_links(char*, int32_t*, const struct inode*, int (*)(char*, int32_t*, const int32_t*, const size_t));
+static int search_cluster_inodeid(void*, int32_t*, const int32_t*, size_t);
+static int search_cluster_inodename(void*, int32_t*, const int32_t*, size_t);
+static int search_clusterid_diritems(void*, int32_t*, const int32_t*, size_t);
+static int search_clusterid_links(void*, int32_t*, const int32_t*, size_t);
+static int search_links(void*, int32_t*, const struct inode*, int (*)(void*, int32_t*, const int32_t*, const size_t));
+static int clear_clusters(int32_t*, size_t);
+static int clear_links(struct inode*);
+
 static void bitmap_field_off(int32_t, int32_t);
 static void bitmap_field_on(int32_t, int32_t);
 static int32_t get_empty_bitmap_field(int32_t);
-static int clear_inode_links(int32_t*, size_t);
+
 static int32_t _init_link();
 static int32_t _init_cluster(int32_t);
 static int32_t _clear_cluster(int32_t);
 static int32_t create_direct();
 static int32_t create_indirect_1(int32_t*);
 static int32_t create_indirect_2(int32_t*);
+
 static bool is_cluster_full_dirs(int32_t);
 static bool is_cluster_full_links(int32_t);
 
@@ -182,9 +188,10 @@ void close_filesystem() {
  *  'links_count' -- Count of links in 'links' cluster,
  *
  */
-static int search_cluster_inodeid(char* name, int32_t* id, const int32_t* links, const size_t links_count) {
+static int search_cluster_inodeid(void* _name, int32_t* id, const int32_t* links, const size_t links_count) {
     int ret = RETURN_FAILURE;
     size_t i, j, items;
+    char* name = (char*) _name;
 
     // array with directory items in cluster
     struct directory_item cluster[sb.count_dir_items];
@@ -196,7 +203,6 @@ static int search_cluster_inodeid(char* name, int32_t* id, const int32_t* links,
             continue;
         }
 
-        // try to read maximum count in cluster -- only successful count of read elements is assigned
         fs_seek_set(sb.addr_data + links[i] * sb.cluster_size);
         fs_read_directory_item(cluster, sizeof(struct directory_item), sb.count_dir_items);
         items = get_count_dirs(cluster);
@@ -230,9 +236,10 @@ static int search_cluster_inodeid(char* name, int32_t* id, const int32_t* links,
  *  'links_count' -- Count of links in 'links' cluster,
  *
  */
-static int search_cluster_inodename(char* name, int32_t* id, const int32_t* links, const size_t links_count) {
+static int search_cluster_inodename(void* _name, int32_t* id, const int32_t* links, const size_t links_count) {
     int ret = RETURN_FAILURE;
     size_t i, j, items;
+    char* name = (char*) _name;
 
     // array with directory items in cluster
     struct directory_item cluster[sb.count_dir_items];
@@ -244,7 +251,6 @@ static int search_cluster_inodename(char* name, int32_t* id, const int32_t* link
             continue;
         }
 
-        // try to read maximum count in cluster -- only successful count of read elements is assigned
         fs_seek_set(sb.addr_data + links[i] * sb.cluster_size);
         fs_read_directory_item(cluster, sizeof(struct directory_item), sb.count_dir_items);
         items = get_count_dirs(cluster);
@@ -267,6 +273,90 @@ static int search_cluster_inodename(char* name, int32_t* id, const int32_t* link
 }
 
 
+static int search_clusterid_diritems(void* _id_cluster, int32_t* id, const int32_t* links, size_t links_count) {
+    int ret = RETURN_FAILURE;
+    size_t i, j, items;
+    int32_t* id_cluster = (int32_t*) _id_cluster;
+
+    // array with directory items in cluster
+    struct directory_item cluster[sb.count_dir_items];
+
+    // check every link to cluster with directory items
+    for (i = 0; i < links_count; ++i) {
+        // other links are free
+        if (links[i] == FREE_LINK) {
+            continue;
+        }
+        // id of cluster is link in inode, not in its cluster
+        else if (links[i] == *id) {
+            *id_cluster = links[i];
+            ret = RETURN_SUCCESS;
+        }
+        // id is in inode's clusters
+        else {
+            fs_seek_set(sb.addr_data + links[i] * sb.cluster_size);
+            fs_read_directory_item(cluster, sizeof(struct directory_item), sb.count_dir_items);
+            items = get_count_dirs(cluster);
+
+            // loop over existing directory items
+            for (j = 0; j < items; ++j) {
+                // inode name with 'id' found
+                if (cluster[j].fk_id_inode == *id) {
+                    *id_cluster = links[i];
+                    ret = RETURN_SUCCESS;
+
+                    break;
+                }
+            }
+        }
+    }
+
+    return ret;
+}
+
+
+static int search_clusterid_links(void* _id_cluster, int32_t* id, const int32_t* links, size_t links_count) {
+    int ret = RETURN_FAILURE;
+    size_t i, j, items;
+    int32_t* id_cluster = (int32_t*) _id_cluster;
+
+    // array with links in cluster
+    int32_t cluster[sb.count_dir_items];
+
+    // check every link to cluster with directory items
+    for (i = 0; i < links_count; ++i) {
+        // other links are free
+        if (links[i] == FREE_LINK) {
+            continue;
+        }
+        // id of cluster is link in inode, not in its cluster
+        else if (links[i] == *id) {
+            *id_cluster = links[i];
+            ret = RETURN_SUCCESS;
+        }
+        // id is in inode's clusters
+        else {
+            fs_seek_set(sb.addr_data + links[i] * sb.cluster_size);
+            fs_read_int32t(cluster, sizeof(int32_t), sb.count_links);
+            items = get_count_links(cluster);
+
+            // loop over existing directory items
+            for (j = 0; j < items; ++j) {
+                // inode name with 'id' found
+                if (cluster[j] == *id) {
+                    *id_cluster = links[i];
+                    ret = RETURN_SUCCESS;
+
+                    break;
+                }
+            }
+        }
+    }
+
+    return ret;
+}
+
+
 /******************************************************************************
  *
  *  Function checks every available link in given inode 'source'.
@@ -280,10 +370,10 @@ static int search_cluster_inodename(char* name, int32_t* id, const int32_t* link
  *  'search_cluster' -- pointer to function, which will be called for cluster searching
  *
  */
-static int32_t search_links(char* name, int32_t* id, const struct inode* source,
-                            int (*search_cluster)(char*, int32_t*, const int32_t*, const size_t)) {
+static int search_links(void* name, int32_t* id, const struct inode* source,
+                        int (*search_cluster)(void*, int32_t*, const int32_t*, const size_t)) {
     int32_t ret = RETURN_FAILURE;
-    size_t i, links;
+    size_t i, links_direct, links_indirect;
 
     // cluster with direct links to be checked
     int32_t clstr_direct[sb.count_links];
@@ -299,9 +389,9 @@ static int32_t search_links(char* name, int32_t* id, const struct inode* source,
         // read whole cluster with 1st level indirect links to clusters with data
         fs_seek_set(sb.addr_data + source->indirect1[0] * sb.cluster_size);
         fs_read_int32t(clstr_direct, sizeof(int32_t), sb.count_links);
-        links = get_count_links(clstr_direct);
+        links_direct = get_count_links(clstr_direct);
 
-        ret = search_cluster(name, id, clstr_direct, links);
+        ret = search_cluster(name, id, clstr_direct, links_direct);
     }
 
     // third -- check indirect links of 2nd level
@@ -310,16 +400,16 @@ static int32_t search_links(char* name, int32_t* id, const struct inode* source,
         // read whole cluster with 2nd level indirect links to clusters with 1st level indirect links
         fs_seek_set(sb.addr_data + source->indirect2[0] * sb.cluster_size);
         fs_read_int32t(clstr_indirect, sizeof(int32_t), sb.count_links);
-        links = get_count_links(clstr_indirect);
+        links_indirect = get_count_links(clstr_indirect);
 
         // loop over each 2nd level indirect link to get clusters with 1st level indirect links
-        for (i = 0; i < links; ++i) {
+        for (i = 0; i < links_indirect; ++i) {
             fs_seek_set(sb.addr_data + clstr_indirect[i] * sb.cluster_size);
             fs_read_int32t(clstr_direct, sizeof(int32_t), sb.count_links);
-            links = get_count_links(clstr_direct);
+            links_direct = get_count_links(clstr_direct);
 
-            // name found
-            if ((ret = search_cluster(name, id, clstr_direct, links)) != RETURN_FAILURE) {
+            // name or id found
+            if ((ret = search_cluster(name, id, clstr_direct, links_direct)) != RETURN_FAILURE) {
                 break;
             }
         }
@@ -645,17 +735,141 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
 }
 
 
-static int clear_inode_links(int32_t* array, const size_t size) {
+static int clear_clusters(int32_t* links, const size_t size) {
     size_t i;
 
     for (i = 0; i < size; ++i) {
-        if (array[i] != FREE_LINK) {
-            _clear_cluster(array[i]);
-            array[i] = FREE_LINK;
+        if (links[i] != FREE_LINK) {
+            _clear_cluster(links[i]);
+            links[i] = FREE_LINK;
         }
     }
 
     return 0;
+}
+
+
+static int clear_links(struct inode* source) {
+    size_t i, links_direct, links_indirect;
+
+    // cluster with direct links to be cleared
+    int32_t clstr_direct[sb.count_links];
+    // cluster with indirect links to be cleared
+    int32_t clstr_indirect[sb.count_links];
+
+    // first -- clear direct links
+    clear_clusters(source->direct, COUNT_DIRECT_LINKS);
+
+    // second -- clear indirect links of 1st level
+    // note: if count of indirect links lvl 1 needs to be bigger than 1 in future, this `if` is needed to be in loop
+    if (source->indirect1[0] != FREE_LINK) {
+        // read whole cluster with 1st level indirect links to clusters with data
+        fs_seek_set(sb.addr_data + source->indirect1[0] * sb.cluster_size);
+        fs_read_int32t(clstr_direct, sizeof(int32_t), sb.count_links);
+        links_direct = get_count_links(clstr_direct);
+
+        // clear all data clusters, which every direct link in cluster points at
+        clear_clusters(clstr_direct, links_direct);
+
+        // clear indirect link lvl 1 in inode
+        _clear_cluster(source->indirect1[0]);
+        source->indirect1[0] = FREE_LINK;
+    }
+
+    // third -- clear indirect links of 2nd level
+    // note: if count of indirect links lvl 2 needs to be bigger than 1 in future, this `if` is needed to be in loop
+    if (source->indirect2[0] != FREE_LINK) {
+        // read whole cluster with 2nd level indirect links to clusters with 1st level indirect links
+        fs_seek_set(sb.addr_data + source->indirect2[0] * sb.cluster_size);
+        fs_read_int32t(clstr_indirect, sizeof(int32_t), sb.count_links);
+        links_indirect = get_count_links(clstr_indirect);
+
+        // loop over each 2nd level indirect link to get clusters with 1st level indirect links
+        for (i = 0; i < links_indirect; ++i) {
+            fs_seek_set(sb.addr_data + clstr_indirect[i] * sb.cluster_size);
+            fs_read_int32t(clstr_direct, sizeof(int32_t), sb.count_links);
+            links_direct = get_count_links(clstr_direct);
+
+            // clear all data clusters, which every direct link in cluster points at
+            clear_clusters(clstr_direct, links_direct);
+
+            // clear indirect link lvl 1 in inode
+            _clear_cluster(clstr_indirect[i]);
+            clstr_indirect[i] = FREE_LINK;
+        }
+
+        // clear indirect link lvl 2 in inode
+        _clear_cluster(source->indirect2[0]);
+        source->indirect2[0] = FREE_LINK;
+    }
+
+    return 0;
+}
+
+
+int delete_empty_links(int32_t* link, struct inode* source) {
+    size_t i, items = 0;
+    int32_t id_cluster, id_cluster2;
+    int32_t cluster[sb.count_dir_items];
+
+    // search for id of cluster, where link to empty cluster is located
+    search_links(&id_cluster, link, source, search_clusterid_links);
+
+    fs_seek_set(sb.addr_data + id_cluster * sb.cluster_size);
+    fs_read_int32t(cluster, sizeof(int32_t), sb.count_links);
+    items = get_count_links(cluster);
+
+    if (items == 1) {
+        // todo clear_parent
+        _clear_cluster(id_cluster);
+
+        delete_empty_links(&id_cluster, source);
+    }
+    else {
+        for (i = 0; i < items; ++i) {
+            if (cluster[i] == *link) {
+                for (; i < items - 1; ++i) {
+                    cluster[i] = cluster[i+1];
+                }
+                cluster[i] = FREE_LINK;
+
+                break;
+            }
+        }
+    }
+}
+
+int delete_record_from_parent(const uint32_t* id_child, struct inode* in_parent) {
+    size_t i, items = 0;
+    int32_t id_cluster = 0;
+    struct directory_item cluster[sb.count_dir_items];
+    struct directory_item empty_dir_item = {"", 0};
+
+    // get 'id_cluster' in 'in_parent', where record of 'id_child' is
+    search_links(&id_cluster, (int32_t*) id_child, in_parent, search_clusterid_diritems);
+
+    fs_seek_set(sb.addr_data + id_cluster * sb.cluster_size);
+    fs_read_directory_item(cluster, sizeof(struct directory_item), sb.count_dir_items);
+    items = get_count_dirs(cluster);
+
+    if (items == 1) {
+        // clear cluster with single directory record
+        _clear_cluster(id_cluster);
+        // delete the link from the cluster with links
+        delete_empty_links(&id_cluster, in_parent);
+    }
+    else {
+        for (i = 0; i < items; ++i) {
+            if (cluster[i].fk_id_inode == *id_child) {
+                for (; i < items - 1; ++i) {
+                    memcpy(&cluster[i], &cluster[i+1], sizeof(struct directory_item));
+                }
+                memcpy(&cluster[i], &empty_dir_item, sizeof(struct directory_item));
+
+                break;
+            }
+        }
+    }
 }
 
 
@@ -683,20 +897,18 @@ int destroy_inode(struct inode* old_inode) {
         fs_seek_set(sb.addr_inodes + id_parent * sizeof(struct inode));
         fs_read_inode(&in_parent, sizeof(struct inode), 1);
 
-        // todo find cluster where record for remove is saved
-
+        // delete record of 'old_inode' in its parent
+        delete_record_from_parent(&old_inode->id_inode, &in_parent);
+        // =if record was last the cluster, delete the cluster
+        delete_empty_links(0, &in_parent);
     }
 
     // reset attributes of inode
     old_inode->item_type = Itemtype_free;
     old_inode->file_size = 0;
 
-    clear_inode_links(old_inode->direct, COUNT_DIRECT_LINKS);
-    // todo this approach..
-    clear_inode_links(old_inode->indirect1, COUNT_INDIRECT_LINKS_1);
-    // todo ..and this approach are buggy -- deletes only first clusters in path,
-    //  so data clusters are left without parent
-    clear_inode_links(old_inode->indirect2, COUNT_INDIRECT_LINKS_2);
+    // clear all clusters that inode is pointing at
+    clear_links(old_inode);
 
     // write cleared inode
     fs_seek_set(sb.addr_inodes + old_inode->id_inode * sizeof(struct inode));

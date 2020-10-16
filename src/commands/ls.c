@@ -38,6 +38,11 @@ static int list_direct_links(const int32_t* links) {
                 else if (in_ls.item_type == Itemtype_file) {
                     printf("- %s\n", cluster[j].item_name);
                 }
+                // never should get here (but i got here during development, so from now,
+                // i am covering all possible cases, even when they seem impossible)
+                else {
+                    fprintf(stderr, "! %s [%d] leftover\n", cluster[j].item_name, cluster[j].fk_id_inode);
+                }
             }
         }
     }
