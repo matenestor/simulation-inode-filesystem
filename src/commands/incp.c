@@ -1,14 +1,10 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "../inc/return_codes.h"
-#include "../inc/inode.h"
+#include "inode.h"
 
-#include "../inc/logger_api.h"
-#include "../error.h"
+#include "../../include/logger.h"
+#include "../../include/errors.h"
 #include "../fs_operations.h"
 
 

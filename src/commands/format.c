@@ -1,4 +1,3 @@
-#include <sys/types.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -7,25 +6,30 @@
 #include <string.h>
 #include <time.h>
 
-#include "format.h"
-#include "../inc/fs_cache.h"
-#include "../inc/inode.h"
-#include "../inc/return_codes.h"
+#include "fs_cache.h"
+#include "inode.h"
 #include "../fs_operations.h"
 
-#include "../inc/logger_api.h"
-#include "../error.h"
+#include "../../include/logger.h"
+#include "../../include/errors.h"
+
+#define LOG_DATETIME_LENGTH_ 	25
+#define FS_SIZE_MAX     		4095	// maximal filesystem size in megabytes MB (using 32b integers)
+#define FS_CLUSTER_SIZE 		1024	// filesystem block size in bytes B
+#define PERCENTAGE      		0.95	// percentage of space for data in filesystem
+#define mb2b(mb)				((mb)*1024UL*1024UL)
+#define isnegnum(cha)			(cha[0] == '-')
+#define isinrange(n)			((n) > 0 && (n) <= FS_SIZE_MAX)
 
 
 static bool isnumeric(const char* num) {
     bool is_num = true;
-
     for (size_t i = 0; i < strlen(num); ++i) {
         if (!isdigit(num[i])) {
             is_num = false;
+			break;
         }
     }
-
     return is_num;
 }
 
@@ -37,8 +41,7 @@ static void get_datetime(char* datetime) {
     // get time
     t = time(NULL);
     tm_info = localtime(&t);
-
-    strftime(datetime, DATETIME_LENGTH, "%Y-%m-%d %H:%M:%S", tm_info);
+    strftime(datetime, LOG_DATETIME_LENGTH_, "%Y-%m-%d %H:%M:%S", tm_info);
 }
 
 
@@ -47,7 +50,7 @@ static void get_datetime(char* datetime) {
  * 	Check if given string by user before formatting is in correct format and size.
  *
  */
-static int is_valid_size(const char* num_str, size_t* size) {
+static int is_valid_size(const char* num_str, uint32_t* size) {
     int ret = RETURN_FAILURE;
     long num = 0;
 
@@ -96,8 +99,8 @@ static int is_valid_size(const char* num_str, size_t* size) {
 }
 
 
-static int init_superblock(const int size, const size_t clstr_cnt) {
-    char datetime[DATETIME_LENGTH] = {0};
+static int init_superblock(const int size, const uint32_t clstr_cnt) {
+    char datetime[LOG_DATETIME_LENGTH_] = {0};
     get_datetime(datetime);
 
     printf("init: superblock.. ");
@@ -318,17 +321,11 @@ int format_(const char* fs_size_str, const char* path) {
         clstr_cnt = (uint32_t) (dt_percentage / FS_CLUSTER_SIZE);
 
         if ((filesystem = fopen(path, "wb+")) != NULL) {
-            // superblock
             init_superblock(fs_size, clstr_cnt);
-            // bitmap of inodes
-            init_bitmap(clstr_cnt);
-            // bitmap of data blocks
-            init_bitmap(clstr_cnt);
-            // inodes
+            init_bitmap(clstr_cnt); // inodes
+            init_bitmap(clstr_cnt); // data blocks
             init_inodes(clstr_cnt);
-            // data clusters
             init_clusters(fs_size);
-            // root directory
             init_root_dir();
 
             log_info("format: Filesystem [%s] with size [%d MB] formatted.", path, fs_size);

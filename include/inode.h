@@ -2,7 +2,6 @@
 #define INODE_H
 
 #include <stdint.h>
-#include <stdbool.h>
 
 
 /** 7 chars (name) + dot + 3 chars (extension) + \0 = 12 chars in total for item name */

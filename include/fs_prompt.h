@@ -2,7 +2,7 @@
 #define FS_PROMPT_H
 
 // max length of filesystem name
-#define STRLEN_FSNAME   32
+#define STRLEN_FSNAME	32
 // max length of filesystem path
 #define STRLEN_FSPATH   1024
 // max. length of pwd in prompt

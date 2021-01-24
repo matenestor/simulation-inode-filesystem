@@ -4,14 +4,13 @@
 #include <unistd.h>
 
 #include "fs_operations.h"
-#include "inc/fs_cache.h"
-#include "inc/fs_prompt.h"
-#include "inc/inode.h"
-#include "inc/return_codes.h"
+#include "fs_cache.h"
+#include "fs_prompt.h"
+#include "inode.h"
 #include "utils.h"
 
-#include "inc/logger_api.h"
-#include "error.h"
+#include "../include/logger.h"
+#include "../include/errors.h"
 
 
 // prototypes of functions in this unit
@@ -117,9 +116,7 @@ unsigned int fs_write_char(const char* buffer, const size_t size, const size_t c
  *  If filesystem with given name does not exists, tell user about possible formatting.
  *
  */
-int init_filesystem(const char* fsp, bool* is_formatted) {
-    int ret = RETURN_FAILURE;
-
+void init_filesystem(const char* fsp, bool* is_formatted) {
     log_info("Loading filesystem [%s].", fsp);
 
     // if filesystem exists, load it
@@ -133,28 +130,28 @@ int init_filesystem(const char* fsp, bool* is_formatted) {
             // cache root inode
             fs_read_inode(&in_actual, sizeof(struct inode), 1);
 
-            puts("Filesystem loaded successfully.");
-            *is_formatted = true;
-            ret = RETURN_SUCCESS;
+			*is_formatted = true;
+			puts("Filesystem loaded successfully.");
 
             log_info("Filesystem [%s] loaded.", fsp);
         }
         // filesystem is ready to be loaded, but there was an system error
         else {
-            set_myerrno(Err_fs_not_loaded);
-            *is_formatted = false;
+			*is_formatted = false;
+			puts("Filesystem corrupted or error while loading it. "
+				"Restart simulation or format it again.");
+			my_perror("System error:");
+			reset_myerrno();
         }
     }
     // else notify about possible formatting
     else {
-        puts("No filesystem with this name found. You can format one with command 'format <size>'.");
-        *is_formatted = false;
-        ret = RETURN_SUCCESS;
+		*is_formatted = false;
+		puts("No filesystem with this name found. "
+	   		"You can format one with command 'format <size>'.");
 
         log_info("Filesystem [%s] not found.", fsp);
     }
-
-    return ret;
 }
 
 

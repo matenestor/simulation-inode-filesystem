@@ -1,14 +1,12 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 
-#include "../inc/return_codes.h"
 #include "../fs_operations.h"
 #include "../utils.h"
 
-#include "../inc/logger_api.h"
-#include "../error.h"
+#include "../../include/logger.h"
+#include "../../include/errors.h"
 
 
 static int print_links(const char* type, const int32_t* src, const size_t size) {

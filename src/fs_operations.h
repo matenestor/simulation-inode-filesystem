@@ -1,10 +1,11 @@
 #ifndef FS_OPERATIONS_H
 #define FS_OPERATIONS_H
 
-
+#include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 
-#include "inc/inode.h"
+#include "inode.h"
 
 
 void fs_seek_set(uint32_t);

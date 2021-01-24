@@ -1,15 +1,13 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-#include "../inc/fs_cache.h"
-#include "../inc/fs_prompt.h"
-#include "../inc/inode.h"
-#include "../inc/return_codes.h"
+#include "fs_cache.h"
+#include "fs_prompt.h"
+#include "inode.h"
 #include "../fs_operations.h"
 
-#include "../inc/logger_api.h"
-#include "../error.h"
+#include "../../include/logger.h"
+#include "../../include/errors.h"
 
 
 static int handle_pwd_change() {

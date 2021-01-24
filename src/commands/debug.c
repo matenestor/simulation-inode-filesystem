@@ -1,9 +1,8 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-#include "../inc/fs_cache.h"
-#include "../inc/inode.h"
+#include "fs_cache.h"
+#include "inode.h"
 #include "../fs_operations.h"
 
 

@@ -4,8 +4,7 @@
 #include "errors.h"
 
 
-int pwd_() {
-	puts(buff_pwd);
-
-	return RETURN_SUCCESS;
+int fsck_() {
+	int ret = RETURN_FAILURE;
+	return ret;
 }

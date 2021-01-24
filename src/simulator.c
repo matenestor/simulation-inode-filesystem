@@ -2,292 +2,187 @@
 #include <string.h>
 
 #include "simulator.h"
-#include "inc/return_codes.h"
+#include "commands/commands.h"
 #include "utils.h"
 
-#include "inc/logger_api.h"
-#include "error.h"
+#include "../include/logger.h"
+#include "../include/errors.h"
 
 
 static void init_prompt() {
-    // create initial pwd, 2 for null terminator also
-    strncpy(buff_pwd, SEPARATOR, 2);
-    // create prompt
-    snprintf(buff_prompt, BUFF_PROMPT_LENGTH, FORMAT_PROMPT, fs_name, buff_pwd);
+	// create initial pwd, 2 for null terminator
+	strncpy(buff_pwd, SEPARATOR, 2);
+	// create prompt
+	snprintf(buff_prompt, BUFF_PROMPT_LENGTH, FORMAT_PROMPT, fs_name, buff_pwd);
 }
 
-
-/******************************************************************************
- *
- *  If EOF was not sent to console and input is in buffer range,
- *  parse command and its arguments, if any.
- *
- *  On success, 0 is returned. On error, -1 is returned.
- *
- */
 static int handle_input(char* command, char* arg1, char* arg2) {
-    int ret = RETURN_FAILURE;
+	int ret = RETURN_FAILURE;
 
-    // discard char
-    int c = 0;
-    // program buffer for user's inputs; 3x more for 'command', 'arg1' and 'arg2'
-    static char buff_in[3 * BUFF_IN_LENGTH] = {0};
+	// discard char
+	static int c = 0;
+	// program buffer for user's inputs; 3x more for 'command', 'arg1' and 'arg2'
+	static char buff_in[3 * BUFF_IN_LENGTH] = {0};
 
-    if ((fgets(buff_in, 3 * BUFF_IN_LENGTH, stdin) != NULL)) {
-        // prevent overflowing input, so it doesn't go to next cycle
-        if (isoverflow(buff_in[3 * BUFF_IN_LENGTH - 2])) {
-            // discard everything in stdin and move on
-            while ((c = fgetc(stdin)) != '\n' && c != EOF);
-            puts("input too large");
-        }
-        else {
-            // input from user is ok, so scan it
-            if (sscanf(buff_in, "%s %s %s", command, arg1, arg2) > 0) {
-                ret = RETURN_SUCCESS;
-            }
-        }
-    }
-    else {
-        // EOF sent to console, print new line
-        puts("");
-    }
+	// receive valid input from user, prevent empty of large input
+	if ((fgets(buff_in, 3 * BUFF_IN_LENGTH, stdin) != NULL)) {
+		// prevent overflowing input, so it doesn't go to next cycle
+		if (isoverflow(buff_in[3 * BUFF_IN_LENGTH - 2])) {
+			// discard everything in stdin and move on
+			while ((c = fgetc(stdin)) != '\n' && c != EOF);
+			puts("input too large");
+		}
+		// input from user is ok, so scan it
+		else if (sscanf(buff_in, "%s %s %s", command, arg1, arg2) > 0) {
+			// in case some word is longer than BUFF_IN_LENGTH
+			command[BUFF_IN_LENGTH - 1] = '\0';
+			arg1[BUFF_IN_LENGTH - 1] = '\0';
+			arg2[BUFF_IN_LENGTH - 1] = '\0';
+			ret = RETURN_SUCCESS;
+		}
+	}
+	else {
+	// empty input (EOF)
+		puts("");
+	}
 
-    return ret;
+	return ret;
 }
 
+static void sim_format(const char* arg1) {
+	if (format_(arg1, fs_name) == RETURN_FAILURE) {
+		is_formatted = false;
+		my_perror(CMD_FORMAT);
+		reset_myerrno();
+	} else {
+		is_formatted = true;
+		init_prompt();
+	}
+}
 
-/******************************************************************************
- *
+static void sim_help() {
+	puts(PR_USAGE);
+}
+
+static void sim_exit() {
+	close_filesystem();
+	is_running = false;
+}
+
+int init_simulation(int argc, char const **argv) {
+	if (argc <= 1) {
+		set_myerrno(Err_fs_name_missing);
+		goto error;
+	}
+	if (strlen(argv[1]) >= STRLEN_FSPATH) {
+		set_myerrno(Err_fs_name_long);
+		fprintf(stderr, "Maximal length of path is %d characters!\n", STRLEN_FSPATH);
+		goto error;
+	}
+	// parse filesystem name from given path
+	if (parse_name(fs_name, argv[1], STRLEN_FSNAME) == RETURN_FAILURE) {
+		set_myerrno(Err_fs_name_long);
+		fprintf(stderr, "Maximal length of filesystem name is %d characters.\n", STRLEN_FSNAME);
+		goto error;
+	}
+	// init filesystem
+	init_filesystem(argv[1], &is_formatted);
+	init_prompt();
+
+	return RETURN_SUCCESS;
+error:
+	return RETURN_FAILURE;
+}
+
+int get_command_id(const char* command) {
+	if (strcmp(command, CMD_PWD) == 0)		return CMD_PWD_ID;
+	if (strcmp(command, CMD_CAT) == 0)		return CMD_CAT_ID;
+	if (strcmp(command, CMD_LS) == 0)		return CMD_LS_ID;
+	if (strcmp(command, CMD_INFO) == 0)		return CMD_INFO_ID;
+	if (strcmp(command, CMD_MV) == 0)		return CMD_MV_ID;
+	if (strcmp(command, CMD_CP) == 0)		return CMD_CP_ID;
+	if (strcmp(command, CMD_RM) == 0)		return CMD_RM_ID;
+	if (strcmp(command, CMD_CD) == 0)		return CMD_CD_ID;
+	if (strcmp(command, CMD_MKDIR) == 0)	return CMD_MKDIR_ID;
+	if (strcmp(command, CMD_RMDIR) == 0)	return CMD_RMDIR_ID;
+	if (strcmp(command, CMD_INCP) == 0)		return CMD_INCP_ID;
+	if (strcmp(command, CMD_OUTCP) == 0)	return CMD_OUTCP_ID;
+	if (strcmp(command, CMD_LOAD) == 0)		return CMD_LOAD_ID;
+	if (strcmp(command, CMD_FSCK) == 0)		return CMD_FSCK_ID;
+	if (strcmp(command, CMD_FORMAT) == 0)	return CMD_FORMAT_ID;
+	if (strcmp(command, CMD_HELP) == 0)		return CMD_HELP_ID;
+	if (strcmp(command, CMD_EXIT) == 0)		return CMD_EXIT_ID;
+	if (strcmp(command, CMD_DEBUG) == 0)	return CMD_DEBUG_ID;
+	return CMD_UNKNOWN_ID;
+}
+
+/*
  *  In simulation cycle handles input from user, if in correct form,
  *  function checks if given command is known and calls it.
  *  If filesystem was not formatted yet, user is allowed to use only
  *  'format', 'help' and 'exit' commands. After formatting, user may use
  *  all other commands.
- *
  */
-static void run() {
-    char command[BUFF_IN_LENGTH] = {0};
-    char arg1[BUFF_IN_LENGTH] = {0};
-    char arg2[BUFF_IN_LENGTH] = {0};
+void run() {
+	int err = RETURN_FAILURE;
+	int cmd_id = 0;
+	char command[BUFF_IN_LENGTH] = {0};
+	char arg1[BUFF_IN_LENGTH] = {0};
+	char arg2[BUFF_IN_LENGTH] = {0};
+	is_running = true;
 
-    while (is_running) {
-        // print prompt
-        fputs(buff_prompt, stdout);
+	while (is_running) {
+		fputs(buff_prompt, stdout);
 
-        // parse input and check which command it is
-        if (handle_input(command, arg1, arg2) == RETURN_SUCCESS) {
+		// clear buffers, so command doesn't accidentally receive
+		// wrong argument(s) from previous iteration
+		BUFF_CLR(command, strlen(command));
+		BUFF_CLR(arg1, strlen(arg1));
+		BUFF_CLR(arg2, strlen(arg2));
 
-            // allowed commands without formatting
-            if (strcmp(command, CMD_FORMAT) == 0) {
-                if (format_(arg1, fs_name) == RETURN_FAILURE) {
-                    my_perror(CMD_FORMAT);
-                    reset_myerrno();
-                    is_formatted = false;
-                }
-                else {
-                    init_prompt();
-                    is_formatted = true;
-                }
-            }
+		if (handle_input(command, arg1, arg2) == RETURN_SUCCESS) {
+			cmd_id = get_command_id(command);
 
-            else if (strcmp(command, CMD_HELP) == 0) {
-                puts(PR_USAGE);
-            }
+			// only basic commands allowed before formatting
+			switch (cmd_id) {
+				case CMD_FORMAT_ID: sim_format(arg1);	continue;
+				case CMD_HELP_ID:	sim_help();			continue;
+				case CMD_EXIT_ID:	sim_exit();			continue;
+				default:
+					if (!(is_formatted || cmd_id == CMD_UNKNOWN_ID)) {
+						puts("Filesystem not formatted. You can format "
+							 "one with command 'format <size>'.");
+						continue;
+					}
+			}
 
-            else if (strcmp(command, CMD_EXIT) == 0) {
-                close_filesystem();
-                is_running = false;
-            }
+			// all commands allowed, when filesystem is formatted
+			switch (cmd_id) {
+				case CMD_PWD_ID:	err = pwd_();				break;
+				case CMD_CAT_ID:	err = cat_(arg1);			break; // TODO
+				case CMD_LS_ID:		err = ls_(arg1);			break; // TODO
+				case CMD_INFO_ID:	err = info_(arg1);			break;
+				case CMD_MV_ID:		err = mv_(arg1, arg2);		break; // TODO
+				case CMD_CP_ID:		err = cp_(arg1, arg2);		break; // TODO
+				case CMD_RM_ID:		err = rm_(arg1);			break; // TODO
+				case CMD_CD_ID:		err = cd_(arg1);			break;
+				case CMD_MKDIR_ID:	err = mkdir_(arg1);			break;
+				case CMD_RMDIR_ID:	err = rmdir_(arg1);			break;
+				case CMD_INCP_ID:	err = incp_(arg1, arg2);	break; // TODO
+				case CMD_OUTCP_ID:	err = outcp_(arg1, arg2);	break; // TODO
+				case CMD_LOAD_ID:	err = load_(arg1);			break; // TODO
+				case CMD_FSCK_ID:	err = fsck_();				break; // TODO
+				case CMD_DEBUG_ID:	err = debug_(arg1);			break;
+				default:
+					puts("-zos: command not found");
+			}
 
-            // after filesystem is formatted, all commands are allowed
-            else if (is_formatted) {
-                if (strcmp(command, CMD_MKDIR) == 0) {
-                    if (mkdir_(arg1) == RETURN_FAILURE) {
-                        my_perror(CMD_MKDIR);
-                        reset_myerrno();
-                    }
-                }
+			if (err == RETURN_FAILURE && cmd_id != CMD_UNKNOWN_ID) {
+				my_perror(command);
+				reset_myerrno();
+			}
+		}
+	}
 
-                else if (strcmp(command, CMD_LS) == 0) {
-                    if (ls_(arg1) == RETURN_FAILURE) {
-                        my_perror(CMD_LS);
-                        reset_myerrno();
-                    }
-                }
-
-                else if (strcmp(command, CMD_PWD) == 0) {
-                    pwd_();
-                }
-
-                else if (strcmp(command, CMD_CD) == 0) {
-                    if (cd_(arg1) == RETURN_FAILURE) {
-                        my_perror(CMD_CD);
-                        reset_myerrno();
-                    }
-                }
-
-                else if (strcmp(command, CMD_INFO) == 0) {
-                    if (info_(arg1) == RETURN_FAILURE) {
-                        my_perror(CMD_INFO);
-                        reset_myerrno();
-                    }
-                }
-
-                else if (strcmp(command, CMD_RMDIR) == 0) {
-                    if (rmdir_(arg1) == RETURN_FAILURE) {
-                        my_perror(CMD_RMDIR);
-                        reset_myerrno();
-                    }
-                }
-
-                else if (strcmp(command, CMD_INCP) == 0) {
-                    if (incp_(arg1, arg2) == RETURN_FAILURE) {
-                        my_perror(CMD_INCP);
-                        reset_myerrno();
-                    }
-                }
-
-                else if (strcmp(command, CMD_OUTCP) == 0) {
-                    if (outcp_(arg1, arg2) == RETURN_FAILURE) {
-                        my_perror(CMD_OUTCP);
-                        reset_myerrno();
-                    }
-                }
-
-                else if (strcmp(command, CMD_CP) == 0) {
-                    cp_(arg1, arg2);
-                }
-
-                else if (strcmp(command, CMD_MV) == 0) {
-                    mv_(arg1, arg2);
-                }
-
-                else if (strcmp(command, CMD_RM) == 0) {
-                    rm_(arg1);
-                }
-
-                else if (strcmp(command, CMD_CAT) == 0) {
-                    cat_(arg1);
-                }
-                else if (strcmp(command, CMD_LOAD) == 0) {
-                    load_(arg1);
-                }
-
-                else if (strcmp(command, CMD_FSCK) == 0) {
-                    fsck_();
-                }
-
-                else if (strcmp(command, CMD_TREE) == 0) {
-                    tree_(arg1);
-                }
-
-                else if (strcmp(command, CMD_DEBUG) == 0) {
-                    debug_(arg1);
-                }
-
-                else {
-                    puts("-zos: command not found");
-                }
-            }
-            else {
-                puts("Filesystem not formatted. You can format one with command 'format <size>'.");
-            }
-        }
-
-        // input buffer is small, so just clear it all
-        BUFF_CLR(command, strlen(command));
-        // buffers for arguments are cleared only as much as necessary (a bit of optimization)
-        BUFF_CLR(arg1, strlen(arg1));
-        BUFF_CLR(arg2, strlen(arg2));
-    }
-}
-
-
-/******************************************************************************
- *
- *  If simulation is successfully initialized, then function runs it.
- *  Else terminates with error.
- *
- */
-int init_simulation(const char* fsp) {
-    int status_simulation;
-
-    if (parse_name(fs_name, fsp, STRLEN_FSNAME) == RETURN_SUCCESS) {
-        init_prompt();
-
-        // if filesystem exists and was loaded successfully, or user was notified about
-        // possible formatting, prepare for simulation
-        if (init_filesystem(fsp, &is_formatted) == RETURN_SUCCESS) {
-            status_simulation = RETURN_SUCCESS;
-            is_running = true;
-
-            puts("Type 'help' for more information.");
-
-            // run simulation
-            run();
-        }
-        else {
-            status_simulation = RETURN_FAILURE;
-            is_running = false;
-
-            err_exit_msg();
-        }
-    }
-    else {
-        is_running = false;
-        status_simulation = RETURN_FAILURE;
-        fprintf(stderr, "Maximal length of filesystem name is %d characters!\n", STRLEN_FSNAME);
-    }
-
-    log_info("Simulation end.");
-
-    return status_simulation;
-}
-
-
-
-
-
-
-
-
-int cp_(const char* arg1, const char* arg2) {
-    int ret = RETURN_FAILURE;
-    return ret;
-}
-
-
-int mv_(const char* arg1, const char* arg2) {
-    int ret = RETURN_FAILURE;
-    return ret;
-}
-
-
-int rm_(const char* arg1) {
-    int ret = RETURN_FAILURE;
-    return ret;
-}
-
-
-int cat_(const char* arg1) {
-    int ret = RETURN_FAILURE;
-    return ret;
-}
-
-
-int load_(const char* arg1) {
-    int ret = RETURN_FAILURE;
-    return ret;
-}
-
-
-int fsck_() {
-    int ret = RETURN_FAILURE;
-    return ret;
-}
-
-
-int tree_(const char* arg1) {
-    int ret = RETURN_FAILURE;
-    return ret;
+	log_info("Simulation end.");
 }

@@ -1,21 +1,13 @@
-#include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 
 #include "utils.h"
-#include "inc/fs_cache.h"
-#include "inc/fs_prompt.h"
-#include "inc/return_codes.h"
+#include "fs_cache.h"
+#include "fs_prompt.h"
 
-#include "inc/logger_api.h"
-#include "error.h"
+#include "../include/logger.h"
+#include "../include/errors.h"
 
 
-/******************************************************************************
- *
- *  Remove separators of directories from end of given path.
- *
- */
 int remove_end_separators(char* path) {
     char* p_path = NULL;
 
@@ -32,11 +24,8 @@ int remove_end_separators(char* path) {
     return 0;
 }
 
-
-/******************************************************************************
- *
+/*
  *  Parse name of last directory in given path.
- *
  */
 int parse_name(char* name, const char* path, const size_t length) {
     int ret = RETURN_FAILURE;
@@ -48,10 +37,8 @@ int parse_name(char* name, const char* path, const size_t length) {
 
         // remove SEPARATORs from the end of the path
         remove_end_separators(buff);
-
         // find last element in given path
         last_sep = strrchr(path, SEPARATOR[0]);
-
         // in case there is no SEPARATOR in path -- name is without path (eg. just "etc")
         last_sep = last_sep == NULL ? buff : last_sep + 1;
 
@@ -73,11 +60,8 @@ int parse_name(char* name, const char* path, const size_t length) {
     return ret;
 }
 
-
-/******************************************************************************
- *
+/*
  *  Parse path to last element in given path. Everything except the last element.
- *
  */
 int parse_parent_path(char* parent_path, const char* path) {
     int ret = RETURN_FAILURE;
@@ -90,7 +74,6 @@ int parse_parent_path(char* parent_path, const char* path) {
 
         // remove SEPARATORs from the end of the path
         remove_end_separators(buff);
-
         // find last element in given path
         last_sep = strrchr(path, SEPARATOR[0]);
 
@@ -115,11 +98,8 @@ int parse_parent_path(char* parent_path, const char* path) {
     return ret;
 }
 
-
-/******************************************************************************
- *
+/*
  *  Get count of links in indirect links cluster.
- *
  */
 size_t get_count_links(int32_t* source) {
     size_t items = 0;
@@ -133,11 +113,8 @@ size_t get_count_links(int32_t* source) {
     return items;
 }
 
-
-/******************************************************************************
- *
+/*
  *  Get count of directory records in directory cluster.
- *
  */
 size_t get_count_dirs(struct directory_item* source) {
     size_t items = 0;

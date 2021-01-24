@@ -1,10 +1,10 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-
+#include <stddef.h>
 #include <stdint.h>
 
-#include "inc/inode.h"
+#include "inode.h"
 
 
 int remove_end_separators(char*);

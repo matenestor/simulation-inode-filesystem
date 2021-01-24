@@ -1,14 +1,11 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 
 #include "../fs_operations.h"
-#include "../inc/inode.h"
-#include "../inc/return_codes.h"
+#include "inode.h"
 
-#include "../inc/logger_api.h"
-#include "../error.h"
+#include "../../include/logger.h"
+#include "../../include/errors.h"
 
 
 int outcp_(const char* source, const char* target) {
