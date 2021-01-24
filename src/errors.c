@@ -23,8 +23,7 @@ void set_myerrno(const enum error_ err) {
 void my_perror(const char* msg) {
 	if (my_errno != Err_no_error) {
 		fprintf(stderr, "%s: %s\n", msg, my_strerror(my_errno));
-	}
-	else if (errno != 0) {
+	} else if (errno != 0) {
 		perror(msg);
 	}
 }
@@ -37,11 +36,9 @@ const char* my_strerror(const enum error_ err) {
 		case Err_fs_name_long:			return "filesystem name too long";
 		case Err_fs_name_invalid:		return "filesystem name invalid";
 		case Err_fs_not_loaded:			return "unable to load filesystem";
-		case Err_fs_not_formatted:		return "unable to format filesystem";
 		case Err_fs_size_sim_range:		return "filesystem size not in simulation range";
 		case Err_fs_size_sys_range:		return "filesystem size not in system range";
 		case Err_fs_size_nan:			return "filesystem size not a number";
-		case Err_fs_size_negative:		return "filesystem size negative";
 		case Err_fs_size_none:			return "filesystem size not provided";
 		case Err_arg_missing:			return "missing operand";
 		case Err_dir_not_empty:			return "directory not empty";

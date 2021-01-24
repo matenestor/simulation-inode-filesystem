@@ -24,7 +24,6 @@ static int handle_pwd_change() {
     return 0;
 }
 
-
 static int handle_prompt_change() {
     handle_pwd_change();
 
@@ -32,7 +31,6 @@ static int handle_prompt_change() {
 
     return 0;
 }
-
 
 int cd_(const char* path) {
     int ret = RETURN_FAILURE;

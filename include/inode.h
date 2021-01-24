@@ -3,22 +3,16 @@
 
 #include <stdint.h>
 
-
-/** 7 chars (name) + dot + 3 chars (extension) + \0 = 12 chars in total for item name */
+// 7 chars (name) + dot + 3 chars (extension) + \0 =
+// = 12 chars in total for item name
 #define STRLEN_ITEM_NAME 12
 
-/** Free link in inode. */
 #define FREE_LINK -1
-
-// it is necessary to increase this values, when more links are added to code
-/** Count of direct links in inode. */
 #define COUNT_DIRECT_LINKS		5
-/** Count of indirect links level 1 in inode. */
 #define COUNT_INDIRECT_LINKS_1	1
-/** Count of indirect links level 2 in inode. */
 #define COUNT_INDIRECT_LINKS_2	1
 
-/** Types of items available in filesystem. */
+// types of items available in filesystem
 enum item {
 	Itemtype_free,
 	Itemtype_file,

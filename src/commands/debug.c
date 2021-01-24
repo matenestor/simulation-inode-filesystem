@@ -34,7 +34,6 @@ static void debug_superblock() {
 			sb.addr_data);
 }
 
-
 static void debug_bitmaps() {
 	size_t i, j;
 	size_t total_fields = sb.block_count;
@@ -75,7 +74,6 @@ static void debug_bitmaps() {
 			free_inodes_fields, sb.block_count,
 			free_block_fields, sb.block_count);
 }
-
 
 static void debug_inodes() {
 	size_t i, j;
@@ -126,7 +124,6 @@ static void debug_inodes() {
 			inodes_dirc, sb.block_count);
 }
 
-
 static void debug_blocks() {
 	size_t i, j, k;
 	// how many data block can be read into 'CACHE_SIZE'
@@ -169,7 +166,6 @@ static void debug_blocks() {
 		   free_blocks, sb.block_count,
 		   sb.block_count - free_blocks, sb.block_count);
 }
-
 
 int debug_(const char* detail) {
 	debug_superblock();

@@ -72,25 +72,25 @@ static void sim_exit() {
 int init_simulation(int argc, char const **argv) {
 	if (argc <= 1) {
 		set_myerrno(Err_fs_name_missing);
-		goto error;
+		goto fail;
 	}
 	if (strlen(argv[1]) >= STRLEN_FSPATH) {
 		set_myerrno(Err_fs_name_long);
-		fprintf(stderr, "Maximal length of path is %d characters!\n", STRLEN_FSPATH);
-		goto error;
+		fprintf(stderr, "! Maximal length of path is %d characters.\n", STRLEN_FSPATH);
+		goto fail;
 	}
 	// parse filesystem name from given path
 	if (parse_name(fs_name, argv[1], STRLEN_FSNAME) == RETURN_FAILURE) {
 		set_myerrno(Err_fs_name_long);
-		fprintf(stderr, "Maximal length of filesystem name is %d characters.\n", STRLEN_FSNAME);
-		goto error;
+		fprintf(stderr, "! Maximal length of filesystem name is %d characters.\n", STRLEN_FSNAME);
+		goto fail;
 	}
 	// init filesystem
 	init_filesystem(argv[1], &is_formatted);
 	init_prompt();
 
 	return RETURN_SUCCESS;
-error:
+fail:
 	return RETURN_FAILURE;
 }
 
@@ -124,7 +124,7 @@ int get_command_id(const char* command) {
  *  all other commands.
  */
 void run() {
-	int err = RETURN_FAILURE;
+	int error = RETURN_FAILURE;
 	int cmd_id = 0;
 	char command[BUFF_IN_LENGTH] = {0};
 	char arg1[BUFF_IN_LENGTH] = {0};
@@ -158,26 +158,26 @@ void run() {
 
 			// all commands allowed, when filesystem is formatted
 			switch (cmd_id) {
-				case CMD_PWD_ID:	err = pwd_();				break;
-				case CMD_CAT_ID:	err = cat_(arg1);			break; // TODO
-				case CMD_LS_ID:		err = ls_(arg1);			break; // TODO
-				case CMD_INFO_ID:	err = info_(arg1);			break;
-				case CMD_MV_ID:		err = mv_(arg1, arg2);		break; // TODO
-				case CMD_CP_ID:		err = cp_(arg1, arg2);		break; // TODO
-				case CMD_RM_ID:		err = rm_(arg1);			break; // TODO
-				case CMD_CD_ID:		err = cd_(arg1);			break;
-				case CMD_MKDIR_ID:	err = mkdir_(arg1);			break;
-				case CMD_RMDIR_ID:	err = rmdir_(arg1);			break;
-				case CMD_INCP_ID:	err = incp_(arg1, arg2);	break; // TODO
-				case CMD_OUTCP_ID:	err = outcp_(arg1, arg2);	break; // TODO
-				case CMD_LOAD_ID:	err = load_(arg1);			break; // TODO
-				case CMD_FSCK_ID:	err = fsck_();				break; // TODO
-				case CMD_DEBUG_ID:	err = debug_(arg1);			break;
+				case CMD_PWD_ID:	error = pwd_();				break;
+				case CMD_CAT_ID:	error = cat_(arg1);			break; // TODO
+				case CMD_LS_ID:		error = ls_(arg1);			break; // TODO
+				case CMD_INFO_ID:	error = info_(arg1);		break;
+				case CMD_MV_ID:		error = mv_(arg1, arg2);	break; // TODO
+				case CMD_CP_ID:		error = cp_(arg1, arg2);	break; // TODO
+				case CMD_RM_ID:		error = rm_(arg1);			break; // TODO
+				case CMD_CD_ID:		error = cd_(arg1);			break;
+				case CMD_MKDIR_ID:	error = mkdir_(arg1);		break;
+				case CMD_RMDIR_ID:	error = rmdir_(arg1);		break;
+				case CMD_INCP_ID:	error = incp_(arg1, arg2);	break; // TODO
+				case CMD_OUTCP_ID:	error = outcp_(arg1, arg2);	break; // TODO
+				case CMD_LOAD_ID:	error = load_(arg1);		break; // TODO
+				case CMD_FSCK_ID:	error = fsck_();			break; // TODO
+				case CMD_DEBUG_ID:	error = debug_(arg1);		break;
 				default:
 					puts("-zos: command not found");
 			}
 
-			if (err == RETURN_FAILURE && cmd_id != CMD_UNKNOWN_ID) {
+			if (error == RETURN_FAILURE && cmd_id != CMD_UNKNOWN_ID) {
 				my_perror(command);
 				reset_myerrno();
 			}

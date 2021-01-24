@@ -1,8 +1,7 @@
-#include <ctype.h>
-#include <errno.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
+#include <stdbool.h>
 #include <string.h>
 #include <time.h>
 
@@ -22,82 +21,66 @@
 #define isinrange(n)			((n) > 0 && (n) <= FS_SIZE_MAX)
 
 
+/*
+ * Check if string is convertible to number.
+ * I made this function, because strtol() converts even '12ab' to '12'
+ * or doesn't notify, that conversion can't be done.
+ * How to recognize if string was "0" and "!?".
+ */
 static bool isnumeric(const char* num) {
-	bool is_num = true;
-	for (size_t i = 0; i < strlen(num); ++i) {
-		if (!isdigit(num[i])) {
-			is_num = false;
-			break;
-		}
+	if (strlen(num) == 0)
+		return false;	// empty string
+	if (strlen(num) == 1 && isnegnum(num))
+		return false;	// first, and only, char is minus
+	if (!(isnegnum(num) || isdigit(num[0])))
+		return false;	// first char is not minus and not number
+	for (size_t i = 1; i < strlen(num); ++i) {
+		if (!isdigit(num[i]))
+			return false;
 	}
-	return is_num;
+	return true;
 }
-
 
 static void get_datetime(char* datetime) {
 	time_t t;
 	struct tm* tm_info;
-
-	// get time
 	t = time(NULL);
 	tm_info = localtime(&t);
 	strftime(datetime, LOG_DATETIME_LENGTH_, "%Y-%m-%d %H:%M:%S", tm_info);
 }
 
-
-/******************************************************************************
- *
- * 	Check if given string by user before formatting is in correct format and size.
- *
- */
 static int is_valid_size(const char* num_str, uint32_t* size) {
-	int ret = RETURN_FAILURE;
 	long num = 0;
 
-	// if string with number was given
-	if (strlen(num_str) > 0) {
-		// if number in given string is not negative
-		if (!isnegnum(num_str)) {
-			// if number in given string is convertible to number
-			// i made this function. because i don't like, that C converts even '12ab' to '12'
-			if (isnumeric(num_str)) {
-				// try to convert the number
-				num = strtol(num_str, NULL, 10);
-
-				// if number was converted successfully
-				if (errno != ERANGE) {
-					// if number is in simulator range
-					if (isinrange(num)) {
-						// set size for the format command
-						*size = (size_t) num;
-						ret = RETURN_SUCCESS;
-					}
-					else {
-						set_myerrno(Err_fs_size_sim_range);
-						fprintf(stderr, "format: use range from 1 to %d [MB]\n", FS_SIZE_MAX);
-					}
-				}
-				else {
-					set_myerrno(Err_fs_size_sys_range);
-					perror("system error");
-					errno = 0;
-				}
-			}
-			else {
-				set_myerrno(Err_fs_size_nan);
-			}
-		}
-		else {
-			set_myerrno(Err_fs_size_negative);
-		}
-	}
-	else {
+	if (strlen(num_str) == 0) {
 		set_myerrno(Err_fs_size_none);
+		goto fail;
+	}
+	if (!isnumeric(num_str)) {
+		set_myerrno(Err_fs_size_nan);
+		goto fail;
 	}
 
-	return ret;
-}
+	// convert number
+	reset_myerrno();
+	num = strtol(num_str, NULL, 10);
 
+	if (is_error()) {
+		set_myerrno(Err_fs_size_sys_range);
+		goto fail;
+	}
+	if (!isinrange(num)) {
+		set_myerrno(Err_fs_size_sim_range);
+		goto fail;
+	}
+
+	*size = (size_t) num;
+	return RETURN_SUCCESS;
+
+fail:
+	fprintf(stderr, "! use size range from 1 to %d [MB].\n", FS_SIZE_MAX);
+	return RETURN_FAILURE;
+}
 
 static int init_superblock(const int size, const uint32_t block_cnt) {
 	char datetime[LOG_DATETIME_LENGTH_] = {0};
@@ -129,14 +112,11 @@ static int init_superblock(const int size, const uint32_t block_cnt) {
 
 	// write superblock to file
 	fs_write_superblock(&sb, sizeof(struct superblock), 1);
-
 	fs_flush();
-
 	puts("done");
 
 	return RETURN_SUCCESS;
 }
-
 
 static int init_bitmap(const size_t block_cnt) {
 	size_t i;
@@ -161,12 +141,10 @@ static int init_bitmap(const size_t block_cnt) {
 	}
 
 	fs_flush();
-
 	puts("done");
 
 	return RETURN_SUCCESS;
 }
-
 
 static int init_inodes(const size_t block_cnt) {
 	size_t i, j;
@@ -184,25 +162,20 @@ static int init_inodes(const size_t block_cnt) {
 
 	printf("init: inodes.. ");
 
-	/* START set root inode */
+	// --- init root inode
 
-	// init root inode
 	in.id_inode = 0;
-	// first inode is used for root directory during format
 	in.item_type = Itemtype_directory;
-	// file size for directories is size of data block
 	in.file_size = FS_BLOCK_SIZE;
 	// root inode point to data block on index 0
 	in.direct[0] = 0;
-	// other links are free
+	// set links root inode
 	for (i = 1; i < COUNT_DIRECT_LINKS; ++i) {
 		in.direct[i] = FREE_LINK;
 	}
-	// set indirect links level 1
 	for (i = 0; i < COUNT_INDIRECT_LINKS_1; ++i) {
 		in.indirect1[i] = FREE_LINK;
 	}
-	// set indirect links level 2
 	for (i = 0; i < COUNT_INDIRECT_LINKS_2; ++i) {
 		in.indirect2[i] = FREE_LINK;
 	}
@@ -212,9 +185,7 @@ static int init_inodes(const size_t block_cnt) {
 	// and to simulator cache
 	memcpy(&in_actual, &in, sizeof(struct inode));
 
-	/* END set root inode */
-
-	/* START set free inodes */
+	// --- set free inodes
 
 	// reset values for rest of the inodes
 	in.item_type = Itemtype_free;
@@ -227,7 +198,7 @@ static int init_inodes(const size_t block_cnt) {
 		memcpy(&inodes[i], &in, sizeof(struct inode));
 	}
 
-	/* END set free inodes */
+	// --- write everything
 
 	// first loop is done manually, because very first inode is root
 	fs_write_inode(inodes, sizeof(struct inode), batch);
@@ -249,7 +220,6 @@ static int init_inodes(const size_t block_cnt) {
 	}
 
 	fs_flush();
-
 	puts("done");
 
 	return RETURN_SUCCESS;
@@ -264,7 +234,7 @@ static int init_blocks(const uint32_t fs_size) {
 	// helper array to be filled from
 	char zeros[CACHE_SIZE] = {0};
 
-	// variables for printing percentage, so  it doesn't look like nothing is happening
+	// variables for printing percentage, so it doesn't look like nothing is happening
 	size_t loops = remaining_part / CACHE_SIZE;
 	size_t percent5 = loops / 20 + 1;
 
@@ -279,9 +249,7 @@ static int init_blocks(const uint32_t fs_size) {
 	}
 	// fill zeros left till very end of filesystem (over fields)
 	fs_write_char(zeros, sizeof(char), remaining_part % CACHE_SIZE);
-
 	fs_flush();
-
 	puts("\rinit: data blocks.. done");
 
 	return RETURN_SUCCESS;
@@ -299,7 +267,6 @@ static int init_root_dir() {
 	// write root directory items to file
 	fs_seek_set(sb.addr_data);
 	fs_write_directory_item(di, sizeof(struct directory_item), 2);
-
 	fs_flush();
 
 	return RETURN_SUCCESS;
@@ -328,25 +295,12 @@ int format_(const char* fs_size_str, const char* path) {
 			init_blocks(fs_size);
 			init_root_dir();
 
-			log_info("format: Filesystem [%s] with size [%d MB] formatted.", path, fs_size);
 			printf("format: filesystem formatted, size: %d MB\n", fs_size);
+			log_info("format: Filesystem [%s] with size [%d MB] formatted.", path, fs_size);
 			ret = RETURN_SUCCESS;
 		}
-		else {
-			log_error("format: System error while formatting: %s", strerror(errno));
-			perror("format");
-			errno = 0;
-		}
-	}
-	else {
-		log_error("format: Simulation error while formatting: %s", my_strerror(my_errno));
-		my_perror("format");
-		reset_myerrno();
-	}
-
-	if (ret == RETURN_FAILURE) {
-		set_myerrno(Err_fs_not_formatted);
-		log_error("Filesystem could not be formatted. [size %s MB] [name: %s]", fs_size_str, fs_name);
+	} else {
+		log_error("Simulation error while formatting: %s", my_strerror(my_errno));
 	}
 
 	return ret;

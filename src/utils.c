@@ -20,7 +20,6 @@ int remove_end_separators(char* path) {
 			--p_path;
 		}
 	}
-
 	return 0;
 }
 

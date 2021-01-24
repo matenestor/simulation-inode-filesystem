@@ -40,7 +40,7 @@ static int list_direct_links(const int32_t* links) {
 				// never should get here (but i got here during development, so from now,
 				// i am covering all possible cases, even when they seem impossible)
 				else {
-					fprintf(stderr, "! %s [%d] leftover\n", block[j].item_name, block[j].fk_id_inode);
+					fprintf(stderr, "! %s [%d] leftover.\n", block[j].item_name, block[j].fk_id_inode);
 				}
 			}
 		}
