@@ -99,7 +99,7 @@ int parse_parent_path(char* parent_path, const char* path) {
 }
 
 /*
- *  Get count of links in indirect links cluster.
+ *  Get count of links in indirect links block.
  */
 size_t get_count_links(int32_t* source) {
 	size_t items = 0;
@@ -114,7 +114,7 @@ size_t get_count_links(int32_t* source) {
 }
 
 /*
- *  Get count of directory records in directory cluster.
+ *  Get count of directory records in directory block.
  */
 size_t get_count_dirs(struct directory_item* source) {
 	size_t items = 0;

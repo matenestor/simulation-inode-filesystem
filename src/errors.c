@@ -53,8 +53,8 @@ const char* my_strerror(const enum error_ err) {
 		case Err_item_name_long:		return "item name too long";
 		case Err_inode_no_inodes:		return "no more inodes available";
 		case Err_inode_no_links:		return "no more links in inode available";
-		case Err_cluster_no_clusters:	return "no more data space available";
-		case Err_cluster_full:			return "cluster is full";
+		case Err_block_no_blocks:		return "no more data space available";
+		case Err_block_full:			return "block is full";
 		case Err_fs_error:				return "Filesystem internal error. Try to use command 'fsck'.";
 		default:						return strerror(errno);
 	}

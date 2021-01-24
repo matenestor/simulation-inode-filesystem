@@ -15,7 +15,7 @@
 
 #define LOG_DATETIME_LENGTH_	25
 #define FS_SIZE_MAX				4095	// maximal filesystem size in megabytes MB (using 32b integers)
-#define FS_CLUSTER_SIZE			1024	// filesystem block size in bytes B
+#define FS_BLOCK_SIZE			1024	// filesystem block size in bytes B
 #define PERCENTAGE				0.95	// percentage of space for data in filesystem
 #define mb2b(mb)				((mb)*1024UL*1024UL)
 #define isnegnum(cha)			(cha[0] == '-')
@@ -99,7 +99,7 @@ static int is_valid_size(const char* num_str, uint32_t* size) {
 }
 
 
-static int init_superblock(const int size, const uint32_t clstr_cnt) {
+static int init_superblock(const int size, const uint32_t block_cnt) {
 	char datetime[LOG_DATETIME_LENGTH_] = {0};
 	get_datetime(datetime);
 
@@ -108,20 +108,20 @@ static int init_superblock(const int size, const uint32_t clstr_cnt) {
 	// inode bitmap is after superblock
 	uint32_t addr_bm_in = sizeof(struct superblock);
 	// data bitmap is after inode bitmap
-	uint32_t addr_bm_dat = addr_bm_in + clstr_cnt;
+	uint32_t addr_bm_dat = addr_bm_in + block_cnt;
 	// inodes are after data bitmap
-	uint32_t addr_in = addr_bm_dat + clstr_cnt;
+	uint32_t addr_in = addr_bm_dat + block_cnt;
 	// data are at the end of filesystem -- there is unused space between inodes and data
-	uint32_t addr_dat = addr_in + clstr_cnt * sizeof(struct inode);
+	uint32_t addr_dat = addr_in + block_cnt * sizeof(struct inode);
 
 	// init superblock variables
 	strncpy(sb.signature, "kmat95", sizeof(sb.signature) - 1);
 	sprintf(sb.volume_descriptor, "%s, made by matenestor", datetime);
 	sb.disk_size = size;
-	sb.cluster_size = FS_CLUSTER_SIZE;
-	sb.cluster_count = clstr_cnt;
-	sb.count_links = sb.cluster_size / sizeof(int32_t);
-	sb.count_dir_items = sb.cluster_size / sizeof(struct directory_item);
+	sb.block_size = FS_BLOCK_SIZE;
+	sb.block_count = block_cnt;
+	sb.count_links = sb.block_size / sizeof(int32_t);
+	sb.count_dir_items = sb.block_size / sizeof(struct directory_item);
 	sb.addr_bm_inodes = addr_bm_in;
 	sb.addr_bm_data = addr_bm_dat;
 	sb.addr_inodes = addr_in;
@@ -138,10 +138,10 @@ static int init_superblock(const int size, const uint32_t clstr_cnt) {
 }
 
 
-static int init_bitmap(const size_t clstr_cnt) {
+static int init_bitmap(const size_t block_cnt) {
 	size_t i;
-	size_t loops = clstr_cnt / CACHE_SIZE;
-	size_t over_fields = clstr_cnt % CACHE_SIZE;
+	size_t loops = block_cnt / CACHE_SIZE;
+	size_t over_fields = block_cnt % CACHE_SIZE;
 	// count of field to be read
 	size_t batch = loops > 0 ? CACHE_SIZE : over_fields;
 	bool bitmap[batch];
@@ -168,18 +168,18 @@ static int init_bitmap(const size_t clstr_cnt) {
 }
 
 
-static int init_inodes(const size_t clstr_cnt) {
+static int init_inodes(const size_t block_cnt) {
 	size_t i, j;
 	// how many inodes can be read into 'CACHE_SIZE'
 	size_t cache_capacity = CACHE_SIZE / sizeof(struct inode);
-	// clstr_cnt == total inodes count
-	size_t loops = clstr_cnt / cache_capacity;
-	size_t over_inodes = clstr_cnt % cache_capacity;
+	// block_cnt == total inodes count
+	size_t loops = block_cnt / cache_capacity;
+	size_t over_inodes = block_cnt % cache_capacity;
 	// count of inodes to be read
 	size_t batch = loops > 0 ? cache_capacity : over_inodes;
 	// inode template
 	struct inode in;
-	// array of cached inode in filesystem (inodes count == cluster count)
+	// array of cached inode in filesystem (inodes count == block count)
 	struct inode inodes[cache_capacity];
 
 	printf("init: inodes.. ");
@@ -190,9 +190,9 @@ static int init_inodes(const size_t clstr_cnt) {
 	in.id_inode = 0;
 	// first inode is used for root directory during format
 	in.item_type = Itemtype_directory;
-	// file size for directories is size of data cluster
-	in.file_size = FS_CLUSTER_SIZE;
-	// root inode point to data cluster on index 0
+	// file size for directories is size of data block
+	in.file_size = FS_BLOCK_SIZE;
+	// root inode point to data block on index 0
 	in.direct[0] = 0;
 	// other links are free
 	for (i = 1; i < COUNT_DIRECT_LINKS; ++i) {
@@ -256,7 +256,7 @@ static int init_inodes(const size_t clstr_cnt) {
 }
 
 
-static int init_clusters(const uint32_t fs_size) {
+static int init_blocks(const uint32_t fs_size) {
 	size_t i;
 	// how much bytes is missing till end of filesystem
 	// after meta part -- empty space part + data part
@@ -268,21 +268,21 @@ static int init_clusters(const uint32_t fs_size) {
 	size_t loops = remaining_part / CACHE_SIZE;
 	size_t percent5 = loops / 20 + 1;
 
-	printf("init: data clusters.. 0 %%");
+	printf("init: data blocks.. 0 %%");
 
 	// fill rest of filesystem with batches of zeros
 	for (i = 1; i <= loops; ++i) {
 		fs_write_char(zeros, sizeof(char), CACHE_SIZE);
 
 		if (i % percent5 == 0)
-			printf("\rinit: data clusters.. %d %%", (size_t) (((float) i / loops)*100));
+			printf("\rinit: data block.. %d %%", (int) (((float) i / loops)*100));
 	}
 	// fill zeros left till very end of filesystem (over fields)
 	fs_write_char(zeros, sizeof(char), remaining_part % CACHE_SIZE);
 
 	fs_flush();
 
-	puts("\rinit: data clusters.. done");
+	puts("\rinit: data blocks.. done");
 
 	return RETURN_SUCCESS;
 }
@@ -310,22 +310,22 @@ int format_(const char* fs_size_str, const char* path) {
 	int ret = RETURN_FAILURE;
 	// necessary step with double type variable for precision
 	double dt_percentage = 0;
-	uint32_t clstr_cnt = 0, fs_size = 0;
+	uint32_t block_cnt = 0, fs_size = 0;
 
 	log_info("Formatting filesystem [path: %s] [size: %s]", path, fs_size_str);
 
 	if (is_valid_size(fs_size_str, &fs_size) == RETURN_SUCCESS) {
-		// Count of clusters in data blocks part is equal to bitmaps sizes and count of inodes.
-		// 'fs_size' is in MB, 'cluster_size' is in B, data part is 100*'PERCENTAGE' % of whole filesystem
+		// Count of blocks in data blocks part is equal to bitmaps sizes and count of inodes.
+		// 'fs_size' is in MB, 'block_size' is in B, data part is 100*'PERCENTAGE' % of whole filesystem
 		dt_percentage = mb2b(fs_size) * PERCENTAGE;
-		clstr_cnt = (uint32_t) (dt_percentage / FS_CLUSTER_SIZE);
+		block_cnt = (uint32_t) (dt_percentage / FS_BLOCK_SIZE);
 
 		if ((filesystem = fopen(path, "wb+")) != NULL) {
-			init_superblock(fs_size, clstr_cnt);
-			init_bitmap(clstr_cnt); // inodes
-			init_bitmap(clstr_cnt); // data blocks
-			init_inodes(clstr_cnt);
-			init_clusters(fs_size);
+			init_superblock(fs_size, block_cnt);
+			init_bitmap(block_cnt); // inodes
+			init_bitmap(block_cnt); // data blocks
+			init_inodes(block_cnt);
+			init_blocks(fs_size);
 			init_root_dir();
 
 			log_info("format: Filesystem [%s] with size [%d MB] formatted.", path, fs_size);

@@ -58,14 +58,14 @@ static int is_dir_empty(const struct inode* in_target) {
 }
 
 
-static int is_cluster_empty(const int32_t id_cluster) {
+static int is_block_empty(const int32_t id_block) {
 	int ret = RETURN_FAILURE;
 	size_t items = 0;
-	struct directory_item cluster[sb.count_dir_items];
+	struct directory_item block[sb.count_dir_items];
 
-	fs_seek_set(sb.addr_data + id_cluster * sb.cluster_size);
-	fs_read_directory_item(cluster, sizeof(struct directory_item), sb.count_dir_items);
-	items = get_count_dirs(cluster);
+	fs_seek_set(sb.addr_data + id_block * sb.block_size);
+	fs_read_directory_item(block, sizeof(struct directory_item), sb.count_dir_items);
+	items = get_count_dirs(block);
 
 	// in directory are only "." and ".." directories
 	if (items == 2) {
@@ -94,7 +94,7 @@ int rmdir_(const char* path) {
 				if (get_inode_by_path(&in_rmdir, path) != RETURN_FAILURE) {
 					if (in_rmdir.item_type == Itemtype_directory) {
 						if (is_dir_empty(&in_rmdir) != RETURN_FAILURE) {
-							if (is_cluster_empty(in_rmdir.direct[0]) != RETURN_FAILURE) {
+							if (is_block_empty(in_rmdir.direct[0]) != RETURN_FAILURE) {
 								ret = destroy_inode(&in_rmdir);
 							}
 						}

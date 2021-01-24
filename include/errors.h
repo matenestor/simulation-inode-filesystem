@@ -31,8 +31,8 @@ enum error_ {
     Err_item_name_long		= 1020,
     Err_inode_no_links		= 1021,
     Err_inode_no_inodes		= 1022,
-    Err_cluster_no_clusters	= 1023,
-    Err_cluster_full		= 1024,
+    Err_block_no_blocks		= 1023,
+    Err_block_full			= 1024,
 };
 
 extern enum error_ my_errno;
