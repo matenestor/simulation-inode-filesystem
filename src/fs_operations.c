@@ -26,9 +26,9 @@ static void bitmap_field_off(int32_t, int32_t);
 static void bitmap_field_on(int32_t, int32_t);
 static int32_t get_empty_bitmap_field(int32_t);
 
-static int32_t _init_link();
-static int32_t _init_block(int32_t);
-static int32_t _clear_block(int32_t);
+static int32_t init_link_();
+static int32_t init_block_(int32_t);
+static int32_t clear_block_(int32_t);
 static int32_t create_direct();
 static int32_t create_indirect_1(int32_t*);
 static int32_t create_indirect_2(int32_t*);
@@ -110,12 +110,6 @@ unsigned int fs_write_char(const char* buffer, const size_t size, const size_t c
 // ================================================================================================
 // START: Filesystem init and close functions.
 
-/******************************************************************************
- *
- *  Load a file with filesystem, if it exists. Read superblock, first inode and set 'is_formatted' to 'true'.
- *  If filesystem with given name does not exists, tell user about possible formatting.
- *
- */
 void init_filesystem(const char* fsp, bool* is_formatted) {
 	log_info("Loading filesystem [%s].", fsp);
 
@@ -154,12 +148,6 @@ void init_filesystem(const char* fsp, bool* is_formatted) {
 	}
 }
 
-
-/******************************************************************************
- *
- *  Close filesystem binary file.
- *
- */
 void close_filesystem() {
 	if (filesystem != NULL) {
 		fclose(filesystem);
@@ -174,8 +162,7 @@ void close_filesystem() {
 // ================================================================================================
 // START: Filesystem inode search functions.
 
-/******************************************************************************
- *
+/*
  *  Searches whole block with directory items for 'id' of inode with 'name'.
  *  When variable, which is looked for, is found, function returns 'RETURN_SUCCESS'.
  *
@@ -183,7 +170,6 @@ void close_filesystem() {
  *  'id'    -- Pointer to variable, where result will be stored.
  *  'links' -- Block with direct links pointing to blocks with directory items, which will be checked.
  *  'links_count' -- Count of links in 'links' block,
- *
  */
 static int search_block_inodeid(void* _name, int32_t* id, const int32_t* links, size_t links_count) {
 	int ret = RETURN_FAILURE;
@@ -221,9 +207,7 @@ static int search_block_inodeid(void* _name, int32_t* id, const int32_t* links, 
 	return ret;
 }
 
-
-/******************************************************************************
- *
+/*
  *  Searches whole block with directory items for 'name' of inode with 'id'.
  *  When variable, which is looked for, is found, function returns 'RETURN_SUCCESS'.
  *
@@ -231,7 +215,6 @@ static int search_block_inodeid(void* _name, int32_t* id, const int32_t* links, 
  *  'id'    -- Id of inode, which is searched for.
  *  'links' -- Block with direct links pointing to blocks with directory items, which will be checked.
  *  'links_count' -- Count of links in 'links' block,
- *
  */
 static int search_block_inodename(void* _name, int32_t* id, const int32_t* links, const size_t links_count) {
 	int ret = RETURN_FAILURE;
@@ -268,7 +251,6 @@ static int search_block_inodename(void* _name, int32_t* id, const int32_t* links
 
 	return ret;
 }
-
 
 static int search_blockid_diritems(void* _id_block, int32_t* id, const int32_t* links, size_t links_count) {
 	int ret = RETURN_FAILURE;
@@ -311,7 +293,6 @@ static int search_blockid_diritems(void* _id_block, int32_t* id, const int32_t* 
 	return ret;
 }
 
-
 static int search_blockid_links(void* _id_block, int32_t* id, const int32_t* links, size_t links_count) {
 	int ret = RETURN_FAILURE;
 	size_t i, j, items;
@@ -353,9 +334,7 @@ static int search_blockid_links(void* _id_block, int32_t* id, const int32_t* lin
 	return ret;
 }
 
-
-/******************************************************************************
- *
+/*
  *  Function checks every available link in given inode 'source'.
  *  Start with direct links, and continue with indirect links level 1 and level 2, if nothing was found.
  *  It reads every block with direct links and then call s function 'search_block(...)',
@@ -365,7 +344,6 @@ static int search_blockid_links(void* _id_block, int32_t* id, const int32_t* lin
  *  'id'     -- id of inode, which is either searched with, or searched for
  *  'source' -- Inode, which is being checked.
  *  'search_block' -- pointer to function, which will be called for block searching
- *
  */
 static int search_links(void* name, int32_t* id, const struct inode* source,
 						int (*search_block)(void*, int32_t*, const int32_t*, const size_t)) {
@@ -419,15 +397,12 @@ static int search_links(void* name, int32_t* id, const struct inode* source,
 	return ret;
 }
 
-
-/******************************************************************************
- *
+/*
  *  Reads inode to 'in_dest' by given path. If path starts with "/",
  *  then function searches from root inode, else from actual inode, where user is.
  *  Inodes to final one are read and traversed folder by folder in path.
  *
  *  If inode was found, return 'RETURN_SUCCESS" in 'ret'.
- *
  */
 int32_t get_inode_by_path(struct inode* in_dest, const char* path) {
 	int32_t ret = RETURN_SUCCESS;
@@ -475,15 +450,12 @@ int32_t get_inode_by_path(struct inode* in_dest, const char* path) {
 	return ret;
 }
 
-
-/******************************************************************************
- *
+/*
  *  Get path from root to actual inode by going back from it to root over parents.
  *  Cache child inode and get if of its parent. Then cache parent inode
  *  and get name of its child. After retrieving name of child, append it to final
  *  path with preceding separator.
  *  If path would be too long for pwd, write at the beginning "..", instead of rest of path.
- *
  */
 int32_t get_path_to_root(char* dest_path, const uint16_t length_new_path, bool* is_overflowed) {
 	int32_t ret = RETURN_SUCCESS;
@@ -564,7 +536,6 @@ int32_t get_path_to_root(char* dest_path, const uint16_t length_new_path, bool* 
 	return ret;
 }
 
-
 // END: Filesystem inode search functions.
 // ================================================================================================
 
@@ -588,14 +559,11 @@ static void bitmap_field_on(const int32_t address, const int32_t index) {
 	fs_flush();
 }
 
-
-/******************************************************************************
- *
+/*
  *  Finds first empty field in bitmap on given address. (Either inodes or data blocks bitmap).
  *  If no field is available, error is set.
  * 
  *  Returns index number of empty bitmap field, or 'RETURN_FAILURE'.
- *
  */
 static int32_t get_empty_bitmap_field(const int32_t address) {
 	size_t i, j;
@@ -665,13 +633,11 @@ static int32_t get_empty_bitmap_field(const int32_t address) {
 // ================================================================================================
 // START: Filesystem inode creation and destruction functions.
 
-/******************************************************************************
- *
+/*
  *  Create new inode for either directory or file. If inode is for directory,
  *  function also initializes '.' and '..' directories.
  *
  *  Returns index number of new inode, or 'RETURN_FAILURE'.
- *
  */
 int32_t create_inode(struct inode* new_inode, const enum item type, const int32_t id_parent) {
 	int32_t ret = RETURN_FAILURE;
@@ -731,20 +697,18 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
 	return ret;
 }
 
-
 static int clear_blocks(int32_t* links, const size_t size) {
 	size_t i;
 
 	for (i = 0; i < size; ++i) {
 		if (links[i] != FREE_LINK) {
-			_clear_block(links[i]);
+			clear_block_(links[i]);
 			links[i] = FREE_LINK;
 		}
 	}
 
 	return 0;
 }
-
 
 static int clear_links(struct inode* source) {
 	size_t i, links_direct, links_indirect;
@@ -769,7 +733,7 @@ static int clear_links(struct inode* source) {
 		clear_blocks(block_direct, links_direct);
 
 		// clear indirect link lvl 1 in inode
-		_clear_block(source->indirect1[0]);
+		clear_block_(source->indirect1[0]);
 		source->indirect1[0] = FREE_LINK;
 	}
 
@@ -791,18 +755,17 @@ static int clear_links(struct inode* source) {
 			clear_blocks(block_direct, links_direct);
 
 			// clear indirect link lvl 1 in inode
-			_clear_block(block_indirect[i]);
+			clear_block_(block_indirect[i]);
 			block_indirect[i] = FREE_LINK;
 		}
 
 		// clear indirect link lvl 2 in inode
-		_clear_block(source->indirect2[0]);
+		clear_block_(source->indirect2[0]);
 		source->indirect2[0] = FREE_LINK;
 	}
 
 	return 0;
 }
-
 
 int delete_empty_links(int32_t* link, struct inode* source) {
 	size_t i, items = 0;
@@ -818,7 +781,7 @@ int delete_empty_links(int32_t* link, struct inode* source) {
 
 	if (items == 1) {
 		// todo clear_parent
-		_clear_block(id_block);
+		clear_block_(id_block);
 
 		delete_empty_links(&id_block, source);
 	}
@@ -851,7 +814,7 @@ int delete_record_from_parent(const uint32_t* id_child, struct inode* in_parent)
 
 	if (items == 1) {
 		// clear block with single directory record
-		_clear_block(id_block);
+		clear_block_(id_block);
 		// delete the link from the block with links
 		delete_empty_links(&id_block, in_parent);
 	}
@@ -869,12 +832,9 @@ int delete_record_from_parent(const uint32_t* id_child, struct inode* in_parent)
 	}
 }
 
-
-/******************************************************************************
- *
+/*
  * 	Destroys given inode by deleting record from its parent's blocks (if it is a directory),
  * 	resetting its values, clearing blocks and links, and turning on its bitmap field.
- *
  */
 int destroy_inode(struct inode* old_inode) {
 	int32_t id_parent;
@@ -924,30 +884,23 @@ int destroy_inode(struct inode* old_inode) {
 // ================================================================================================
 // START: Filesystem creation of links in inode.
 
-/******************************************************************************
- *
+/*
  *  Initialize new link to empty data block.
- *
  *  Return index number of the block, or 'RETURN_FAILURE'.
- *
  */
-static int32_t _init_link() {
+static int32_t init_link_() {
 	return get_empty_bitmap_field(sb.addr_bm_data);
 }
 
-
-/******************************************************************************
- *
+/*
  *  Initialize block with 'FREE_LINK's and first link to empty block.
- *
  *  Return index number of the block, or 'RETURN_FAILURE'.
- *
  */
-static int32_t _init_block(int32_t id_block) {
+static int32_t init_block_(int32_t id_block) {
 	int32_t free_index = RETURN_FAILURE;
 	int32_t block[sb.count_links];
 
-	if ((free_index = _init_link()) != RETURN_FAILURE) {
+	if ((free_index = init_link_()) != RETURN_FAILURE) {
 		// init the block
 		memset(block, FREE_LINK, sb.count_links);
 		block[0] = free_index;
@@ -962,13 +915,7 @@ static int32_t _init_block(int32_t id_block) {
 	return free_index;
 }
 
-
-/******************************************************************************
- *
- *  Clear block of every data inside.
- *
- */
-static int32_t _clear_block(int32_t id_block) {
+static int32_t clear_block_(int32_t id_block) {
 	char block[sb.block_size];
 
 	// clear the block
@@ -985,25 +932,17 @@ static int32_t _clear_block(int32_t id_block) {
 	return 0;
 }
 
-
-/******************************************************************************
- *
+/*
  *  Create new direct link.
- *
  *  Returns index number of block where new link points to, or 'RETURN_FAILURE'.
- *
  */
 static int32_t create_direct() {
-	return _init_link();
+	return init_link_();
 }
 
-
-/******************************************************************************
- *
+/*
  *  Create new indirect link level 1.
- *  
  *  Returns index number of block where new link points to, or 'RETURN_FAILURE'.
- *  
  */
 static int32_t create_indirect_1(int32_t* link) {
 	int ret = RETURN_FAILURE;
@@ -1011,10 +950,10 @@ static int32_t create_indirect_1(int32_t* link) {
 	int32_t id_block_data = RETURN_FAILURE;
 
 	// init link to block of direct links
-	if ((id_block_direct = _init_link()) != RETURN_FAILURE) {
+	if ((id_block_direct = init_link_()) != RETURN_FAILURE) {
 		// init block with direct links (return value is first link
 		// with address to data block, or fail)
-		if ((id_block_data = _init_block(id_block_direct)) != RETURN_FAILURE) {
+		if ((id_block_data = init_block_(id_block_direct)) != RETURN_FAILURE) {
 			*link = id_block_direct;
 			ret = id_block_data;
 		}
@@ -1028,13 +967,9 @@ static int32_t create_indirect_1(int32_t* link) {
 	return ret;
 }
 
-
-/******************************************************************************
- *
+/*
  *  Create new indirect link level 2.
- *  
  *  Returns index number of block where new link points to, or 'RETURN_FAILURE'.
- *  
  */
 static int32_t create_indirect_2(int32_t* link) {
 	int ret = RETURN_FAILURE;
@@ -1046,14 +981,14 @@ static int32_t create_indirect_2(int32_t* link) {
 	if ((id_block_direct = create_indirect_1(&id_block_indirect)) != RETURN_FAILURE) {
 		// init block with direct links (return value is first link
 		// with address to data block, or fail)
-		if ((id_block_data = _init_block(id_block_direct)) != RETURN_FAILURE) {
+		if ((id_block_data = init_block_(id_block_direct)) != RETURN_FAILURE) {
 			*link = id_block_indirect;
 			ret = id_block_data;
 		}
 		// blocks were not initialized == no more free blocks, so clear block with indirect links
 		// level 1 and turn on both blocks with indirect links level 1 and direct links again
 		else {
-			_clear_block(id_block_indirect);
+			clear_block_(id_block_indirect);
 			bitmap_field_on(sb.addr_bm_data, id_block_indirect);
 			bitmap_field_on(sb.addr_bm_data, id_block_direct);
 		}
@@ -1062,16 +997,11 @@ static int32_t create_indirect_2(int32_t* link) {
 	return ret;
 }
 
-
 // ================================================================================================
 
-
-/******************************************************************************
- *
+/*
  *  Check if block is full of directory items.
- *
  *  Returns true if block is full, else false.
- *
  */
 static bool is_block_full_dirs(const int32_t id_block) {
 	bool is_full = false;
@@ -1090,13 +1020,9 @@ static bool is_block_full_dirs(const int32_t id_block) {
 	return is_full;
 }
 
-
-/******************************************************************************
- *
+/*
  *  Check if block is full of links.
- *
  *  Returns true if block is full, else false.
- *
  */
 static bool is_block_full_links(const int32_t id_block) {
 	bool is_full = false;
@@ -1115,13 +1041,9 @@ static bool is_block_full_links(const int32_t id_block) {
 	return is_full;
 }
 
-
-/******************************************************************************
- *
+/*
  *  Get first available link in given inode, or create new link in the inode.
- *
  *  Returns id of block where the link points to, or 'RETURN_FAILURE'.
- *
  */
 int32_t get_link(struct inode* source) {
 	int32_t id_free_block = RETURN_FAILURE;

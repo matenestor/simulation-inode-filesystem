@@ -27,4 +27,3 @@ int outcp_(const char* source, const char* target) {
 
 	return ret;
 }
-

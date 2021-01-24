@@ -10,11 +10,9 @@
 #include "../../include/errors.h"
 
 
-/******************************************************************************
- *
+/*
  * 	Check if making new directory is possible by reading parent of the directory
  * 	and then trying to read inode with name of the directory.
- *
  */
 static bool is_mkdir_possible(const char* path, const char* path_parent) {
 	bool is_creatable = false;
@@ -34,9 +32,7 @@ static bool is_mkdir_possible(const char* path, const char* path_parent) {
 	return is_creatable;
 }
 
-
-/******************************************************************************
- *
+/*
  * 	Makes new directory. Check if path was given, parse name from path,
  * 	check if directory creation is possible, get inode where the directory will be created,
  * 	get free link in the inode, create new inode for the directory.

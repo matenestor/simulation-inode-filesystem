@@ -26,7 +26,6 @@ static int check_dot_dirs(const char* dir_name) {
 	return ret;
 }
 
-
 static bool is_array_empty(const int32_t* array, const size_t size, const size_t begin) {
 	bool ret = true;
 	size_t i;
@@ -40,7 +39,6 @@ static bool is_array_empty(const int32_t* array, const size_t size, const size_t
 
 	return ret;
 }
-
 
 static int is_dir_empty(const struct inode* in_target) {
 	int ret = RETURN_FAILURE;
@@ -56,7 +54,6 @@ static int is_dir_empty(const struct inode* in_target) {
 
 	return ret;
 }
-
 
 static int is_block_empty(const int32_t id_block) {
 	int ret = RETURN_FAILURE;
@@ -81,7 +78,6 @@ static int is_block_empty(const int32_t id_block) {
 
 	return ret;
 }
-
 
 int rmdir_(const char* path) {
 	int ret = RETURN_FAILURE;
