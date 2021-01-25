@@ -3,7 +3,7 @@ project(KIV_ZOS_sp C)
 
 set(CMAKE_C_STANDARD 99)
 
-include_directories(include/)
+include_directories(include)
 
 add_executable(KIV_ZOS_sp
         src/logger.c
@@ -31,4 +31,7 @@ add_executable(KIV_ZOS_sp
         src/commands/fsck.c
         src/commands/format.c
         src/commands/debug.c
-)
+
+        src/fsop/fs_io.c src/fsop/fs_io.h
+
+        src/fsop/fs_bitmap.c src/fsop/fs_bitmap.h)

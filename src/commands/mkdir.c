@@ -78,7 +78,7 @@ int mkdir_(const char* path) {
 						if (create_inode(&in_new_dir, Itemtype_directory, in_parent.id_inode) != RETURN_FAILURE) {
 							// cache block where the record of new directory will be stored
 							fs_seek_set(sb.addr_data + id_block * sb.block_size);
-							fs_read_directory_item(dirs, sizeof(struct directory_item), sb.count_dir_items);
+							fs_read_directory_item(dirs, sb.count_dir_items);
 							items = get_count_dirs(dirs);
 
 							// init new directory
@@ -90,7 +90,7 @@ int mkdir_(const char* path) {
 
 							// write updated block
 							fs_seek_set(sb.addr_data + id_block * sb.block_size);
-							fs_write_directory_item(dirs, sizeof(struct directory_item), items + 1);
+							fs_write_directory_item(dirs, items + 1);
 
 							fs_flush();
 

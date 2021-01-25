@@ -61,7 +61,7 @@ static int is_block_empty(const int32_t id_block) {
 	struct directory_item block[sb.count_dir_items];
 
 	fs_seek_set(sb.addr_data + id_block * sb.block_size);
-	fs_read_directory_item(block, sizeof(struct directory_item), sb.count_dir_items);
+	fs_read_directory_item(block, sb.count_dir_items);
 	items = get_count_dirs(block);
 
 	// in directory are only "." and ".." directories

@@ -53,10 +53,10 @@ static void debug_bitmaps() {
 		batch = i < loops ? CACHE_SIZE : over_fields;
 
 		fs_seek_set(i < loops ? sb.addr_bm_inodes + i * CACHE_SIZE : addr_over_bm_in);
-		fs_read_bool(bm_inodes, sizeof(bool), batch);
+		fs_read_bool(bm_inodes, batch);
 
 		fs_seek_set(i < loops ? sb.addr_bm_data + i * CACHE_SIZE : addr_over_bm_dt);
-		fs_read_bool(bm_data, sizeof(bool), batch);
+		fs_read_bool(bm_data, batch);
 
 		for (j = 0; j < batch; ++j) {
 			if (bm_inodes[j])
@@ -95,7 +95,7 @@ static void debug_inodes() {
 	for (i = 0; i <= loops; ++i) {
 		batch = i < loops ? cache_capacity : over_inodes;
 
-		fs_read_inode(inodes, sizeof(struct inode), batch);
+		fs_read_inode(inodes, batch);
 
 		for (j = 0; j < batch; ++j) {
 			if (inodes[j].item_type == Itemtype_free)
@@ -145,7 +145,7 @@ static void debug_blocks() {
 
 	for (i = 0; i <= loops; ++i) {
 		batch = i < loops ? max_blocks : over_blocks;
-		fs_read_char(blocks, sizeof(char), batch * sb.block_size);
+		fs_read_char(blocks, batch * sb.block_size);
 
 		// check every block in cache
 		for (j = 0; j < batch; ++j) {

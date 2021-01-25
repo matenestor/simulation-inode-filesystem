@@ -6,6 +6,8 @@
 #include "fs_operations.h"
 #include "fs_cache.h"
 #include "fs_prompt.h"
+#include "fsop/fs_io.h"
+#include "fsop/fs_bitmap.h"
 #include "inode.h"
 #include "utils.h"
 
@@ -22,10 +24,6 @@ static int search_links(void*, int32_t*, const struct inode*, int (*)(void*, int
 static int clear_blocks(int32_t*, size_t);
 static int clear_links(struct inode*);
 
-static void bitmap_field_off(int32_t, int32_t);
-static void bitmap_field_on(int32_t, int32_t);
-static int32_t get_empty_bitmap_field(int32_t);
-
 static int32_t init_link_();
 static int32_t init_block_(int32_t);
 static int32_t clear_block_(int32_t);
@@ -35,77 +33,6 @@ static int32_t create_indirect_2(int32_t*);
 
 static bool is_block_full_dirs(int32_t);
 static bool is_block_full_links(int32_t);
-
-
-// ================================================================================================
-// START: Filesystem input/output functions.
-
-void fs_seek_set(uint32_t offset) {
-	if (offset > INT32_MAX) {
-		offset -= INT32_MAX;
-		fseek(filesystem, INT32_MAX, SEEK_SET);
-		fseek(filesystem, offset, SEEK_CUR);
-	}
-	else {
-		fseek(filesystem, offset, SEEK_SET);
-	}
-}
-
-void fs_flush() {
-	fflush(filesystem);
-}
-
-unsigned int fs_read_superblock(struct superblock* buffer, const size_t size, const size_t count) {
-	return fread(buffer, size, count, filesystem);
-}
-
-unsigned int fs_read_inode(struct inode* buffer, const size_t size, const size_t count) {
-	return fread(buffer, size, count, filesystem);
-}
-
-unsigned int fs_read_directory_item(struct directory_item* buffer, const size_t size, const size_t count) {
-	return fread(buffer, size, count, filesystem);
-}
-
-unsigned int fs_read_int32t(int32_t* buffer, const size_t size, const size_t count) {
-	return fread(buffer, size, count, filesystem);
-}
-
-unsigned int fs_read_bool(bool* buffer, const size_t size, const size_t count) {
-	return fread(buffer, size, count, filesystem);
-}
-
-unsigned int fs_read_char(char* buffer, const size_t size, const size_t count) {
-	return fread(buffer, size, count, filesystem);
-}
-
-unsigned int fs_write_superblock(const struct superblock* buffer, const size_t size, const size_t count) {
-	return fwrite(buffer, size, count, filesystem);
-}
-
-unsigned int fs_write_inode(const struct inode* buffer, const size_t size, const size_t count) {
-	return fwrite(buffer, size, count, filesystem);
-}
-
-unsigned int fs_write_directory_item(const struct directory_item* buffer, const size_t size, const size_t count) {
-	return fwrite(buffer, size, count, filesystem);
-}
-
-unsigned int fs_write_int32t(const int32_t* buffer, const size_t size, const size_t count) {
-	return fwrite(buffer, size, count, filesystem);
-}
-
-unsigned int fs_write_bool(const bool* buffer, const size_t size, const size_t count) {
-	return fwrite(buffer, size, count, filesystem);
-}
-
-unsigned int fs_write_char(const char* buffer, const size_t size, const size_t count) {
-	return fwrite(buffer, size, count, filesystem);
-}
-
-// END: Filesystem input/output functions.
-// ================================================================================================
-
 
 // ================================================================================================
 // START: Filesystem init and close functions.
@@ -118,11 +45,11 @@ void init_filesystem(const char* fsp, bool* is_formatted) {
 		// filesystem is ready to be loaded
 		if ((filesystem = fopen(fsp, "rb+")) != NULL) {
 			// cache super block
-			fs_read_superblock(&sb, sizeof(struct superblock), 1);
+			fs_read_superblock(&sb, 1);
 			// move to inodes location
 			fs_seek_set(sb.addr_inodes);
 			// cache root inode
-			fs_read_inode(&in_actual, sizeof(struct inode), 1);
+			fs_read_inode(&in_actual, 1);
 
 			*is_formatted = true;
 			puts("Filesystem loaded successfully.");
@@ -187,7 +114,7 @@ static int search_block_inodeid(void* _name, int32_t* id, const int32_t* links, 
 		}
 
 		fs_seek_set(sb.addr_data + links[i] * sb.block_size);
-		fs_read_directory_item(block, sizeof(struct directory_item), sb.count_dir_items);
+		fs_read_directory_item(block, sb.count_dir_items);
 		items = get_count_dirs(block);
 
 		// loop over existing directory items
@@ -232,7 +159,7 @@ static int search_block_inodename(void* _name, int32_t* id, const int32_t* links
 		}
 
 		fs_seek_set(sb.addr_data + links[i] * sb.block_size);
-		fs_read_directory_item(block, sizeof(struct directory_item), sb.count_dir_items);
+		fs_read_directory_item(block, sb.count_dir_items);
 		items = get_count_dirs(block);
 
 		// loop over existing directory items
@@ -274,7 +201,7 @@ static int search_blockid_diritems(void* _id_block, int32_t* id, const int32_t* 
 		// id is in inode's blocks
 		else {
 			fs_seek_set(sb.addr_data + links[i] * sb.block_size);
-			fs_read_directory_item(block, sizeof(struct directory_item), sb.count_dir_items);
+			fs_read_directory_item(block, sb.count_dir_items);
 			items = get_count_dirs(block);
 
 			// loop over existing directory items
@@ -315,7 +242,7 @@ static int search_blockid_links(void* _id_block, int32_t* id, const int32_t* lin
 		// id is in inode's blocks
 		else {
 			fs_seek_set(sb.addr_data + links[i] * sb.block_size);
-			fs_read_int32t(block, sizeof(int32_t), sb.count_links);
+			fs_read_int32t(block, sb.count_links);
 			items = get_count_links(block);
 
 			// loop over existing directory items
@@ -363,7 +290,7 @@ static int search_links(void* name, int32_t* id, const struct inode* source,
 	if (source->indirect1[0] != FREE_LINK && ret == RETURN_FAILURE) {
 		// read whole block with 1st level indirect links to blocks with data
 		fs_seek_set(sb.addr_data + source->indirect1[0] * sb.block_size);
-		fs_read_int32t(block_direct, sizeof(int32_t), sb.count_links);
+		fs_read_int32t(block_direct, sb.count_links);
 		links_direct = get_count_links(block_direct);
 
 		ret = search_block(name, id, block_direct, links_direct);
@@ -374,13 +301,13 @@ static int search_links(void* name, int32_t* id, const struct inode* source,
 	if (source->indirect2[0] != FREE_LINK && ret == RETURN_FAILURE) {
 		// read whole block with 2nd level indirect links to blocks with 1st level indirect links
 		fs_seek_set(sb.addr_data + source->indirect2[0] * sb.block_size);
-		fs_read_int32t(block_indirect, sizeof(int32_t), sb.count_links);
+		fs_read_int32t(block_indirect, sb.count_links);
 		links_indirect = get_count_links(block_indirect);
 
 		// loop over each 2nd level indirect link to get blocks with 1st level indirect links
 		for (i = 0; i < links_indirect; ++i) {
 			fs_seek_set(sb.addr_data + block_indirect[i] * sb.block_size);
-			fs_read_int32t(block_direct, sizeof(int32_t), sb.count_links);
+			fs_read_int32t(block_direct, sb.count_links);
 			links_direct = get_count_links(block_direct);
 
 			// name or id found
@@ -415,12 +342,12 @@ int32_t get_inode_by_path(struct inode* in_dest, const char* path) {
 	// track path from root
 	if (path_copy[0] == SEPARATOR[0]) {
 		fs_seek_set(sb.addr_inodes);
-		fs_read_inode(in_dest, sizeof(struct inode), 1);
+		fs_read_inode(in_dest, 1);
 	}
 	// track path from actual directory
 	else {
 		fs_seek_set(sb.addr_inodes + in_actual.id_inode * sizeof(struct inode));
-		fs_read_inode(in_dest, sizeof(struct inode), 1);
+		fs_read_inode(in_dest, 1);
 	}
 
 	id = in_dest->id_inode;
@@ -441,7 +368,7 @@ int32_t get_inode_by_path(struct inode* in_dest, const char* path) {
 		// still some elements to parse -- continue
 		else {
 			fs_seek_set(sb.addr_inodes + id * sizeof(struct inode));
-			fs_read_inode(in_dest, sizeof(struct inode), 1);
+			fs_read_inode(in_dest, 1);
 		}
 
 		dir = strtok(NULL, SEPARATOR);
@@ -480,14 +407,14 @@ int32_t get_path_to_root(char* dest_path, const uint16_t length_new_path, bool* 
 	while (id_child != 0) {
 		// cache child inode
 		fs_seek_set(sb.addr_inodes + id_child * sizeof(struct inode));
-		fs_read_inode(&in_tmp, sizeof(struct inode), 1);
+		fs_read_inode(&in_tmp, 1);
 
 		// get id of parent inode
 		search_links("..", &id_parent, &in_tmp, search_block_inodeid);
 
 		// cache parent inode
 		fs_seek_set(sb.addr_inodes + id_parent * sizeof(struct inode));
-		fs_read_inode(&in_tmp, sizeof(struct inode), 1);
+		fs_read_inode(&in_tmp, 1);
 
 		// get name of child inode
 		if (search_links(child_name, &id_child, &in_tmp, search_block_inodename) == RETURN_FAILURE) {
@@ -540,97 +467,6 @@ int32_t get_path_to_root(char* dest_path, const uint16_t length_new_path, bool* 
 // ================================================================================================
 
 // ================================================================================================
-// START: Filesystem bitmap managing functions.
-
-static void bitmap_field_off(const int32_t address, const int32_t index) {
-	bool f = false;
-	fs_seek_set(address + index);
-	fs_write_bool(&f, sizeof(bool), 1);
-
-	fs_flush();
-}
-
-
-static void bitmap_field_on(const int32_t address, const int32_t index) {
-	bool t = true;
-	fs_seek_set(address + index);
-	fs_write_bool(&t, sizeof(bool), 1);
-
-	fs_flush();
-}
-
-/*
- *  Finds first empty field in bitmap on given address. (Either inodes or data blocks bitmap).
- *  If no field is available, error is set.
- * 
- *  Returns index number of empty bitmap field, or 'RETURN_FAILURE'.
- */
-static int32_t get_empty_bitmap_field(const int32_t address) {
-	size_t i, j;
-	size_t index = RETURN_FAILURE;
-	size_t loops = sb.block_count / CACHE_SIZE;
-	size_t over_fields = sb.block_count % CACHE_SIZE;
-	// count of field to be read
-	size_t batch = loops > 0 ? CACHE_SIZE : over_fields;
-	bool bitmap[batch];
-
-	memset(bitmap, false, batch);
-
-	for (i = 0; i <= loops; ++i) {
-		batch = i < loops ? CACHE_SIZE : over_fields;
-
-		// cache part of bitmap
-		fs_seek_set(address + i * CACHE_SIZE);
-		fs_read_bool(bitmap, sizeof(bool), batch);
-
-		// check cached array for a free field
-		for (j = 0; j < batch; ++j) {
-			// check if field is free
-			if (bitmap[j]) {
-				// position of field in whole bitmap
-				index = i * CACHE_SIZE + j;
-				// turn off the index
-				bitmap_field_off(address, index);
-
-				break;
-			}
-		}
-
-		// if free field was found, break
-		if (index != RETURN_FAILURE) {
-			log_info("Free block, type: [%s], index: [%d].", address == sb.addr_bm_inodes ? "inodes" : "data", index);
-
-			break;
-		}
-	}
-
-	// no more free inodes/data blocks
-	if (index == RETURN_FAILURE) {
-		if (address == sb.addr_bm_inodes) {
-			set_myerrno(Err_inode_no_inodes);
-
-			log_error("Out of inodes.");
-		}
-		else if (address == sb.addr_bm_data) {
-			set_myerrno(Err_block_no_blocks);
-
-			log_error("Out of data blocks.");
-		}
-		else {
-			set_myerrno(Err_fs_error);
-
-			log_error("Unknown address [%d]. Filesystem might be corrupted.", address);
-		}
-	}
-
-	return index;
-}
-
-// END: Filesystem bitmap managing functions.
-// ================================================================================================
-
-
-// ================================================================================================
 // START: Filesystem inode creation and destruction functions.
 
 /*
@@ -657,7 +493,7 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
 	if (!(id_free_inode == RETURN_FAILURE || id_free_block == RETURN_FAILURE)) {
 		// cache the free inode, in order to init it
 		fs_seek_set(sb.addr_inodes + id_free_inode * sizeof(struct inode));
-		fs_read_inode(new_inode, sizeof(struct inode), 1);
+		fs_read_inode(new_inode, 1);
 
 		// init new inode
 		new_inode->item_type = type;
@@ -675,14 +511,14 @@ int32_t create_inode(struct inode* new_inode, const enum item type, const int32_
 			new_dir_item[1].fk_id_inode = id_parent;
 
 			fs_seek_set(sb.addr_data + id_free_block * sb.block_size);
-			fs_write_directory_item(new_dir_item, sizeof(struct directory_item), 2);
+			fs_write_directory_item(new_dir_item, 2);
 
 			fs_flush();
 		}
 
 		// write new updated inode
 		fs_seek_set(sb.addr_inodes + id_free_inode * sizeof(struct inode));
-		fs_write_inode(new_inode, sizeof(struct inode), 1);
+		fs_write_inode(new_inode, 1);
 
 		fs_flush();
 
@@ -726,7 +562,7 @@ static int clear_links(struct inode* source) {
 	if (source->indirect1[0] != FREE_LINK) {
 		// read whole block with 1st level indirect links to blocks with data
 		fs_seek_set(sb.addr_data + source->indirect1[0] * sb.block_size);
-		fs_read_int32t(block_direct, sizeof(int32_t), sb.count_links);
+		fs_read_int32t(block_direct, sb.count_links);
 		links_direct = get_count_links(block_direct);
 
 		// clear all data blocks, which every direct link in block points at
@@ -742,13 +578,13 @@ static int clear_links(struct inode* source) {
 	if (source->indirect2[0] != FREE_LINK) {
 		// read whole block with 2nd level indirect links to blocks with 1st level indirect links
 		fs_seek_set(sb.addr_data + source->indirect2[0] * sb.block_size);
-		fs_read_int32t(block_indirect, sizeof(int32_t), sb.count_links);
+		fs_read_int32t(block_indirect, sb.count_links);
 		links_indirect = get_count_links(block_indirect);
 
 		// loop over each 2nd level indirect link to get blocks with 1st level indirect links
 		for (i = 0; i < links_indirect; ++i) {
 			fs_seek_set(sb.addr_data + block_indirect[i] * sb.block_size);
-			fs_read_int32t(block_direct, sizeof(int32_t), sb.count_links);
+			fs_read_int32t(block_direct, sb.count_links);
 			links_direct = get_count_links(block_direct);
 
 			// clear all data blocks, which every direct link in block points at
@@ -776,7 +612,7 @@ int delete_empty_links(int32_t* link, struct inode* source) {
 	search_links(&id_block, link, source, search_blockid_links);
 
 	fs_seek_set(sb.addr_data + id_block * sb.block_size);
-	fs_read_int32t(block, sizeof(int32_t), sb.count_links);
+	fs_read_int32t(block, sb.count_links);
 	items = get_count_links(block);
 
 	if (items == 1) {
@@ -809,7 +645,7 @@ int delete_record_from_parent(const uint32_t* id_child, struct inode* in_parent)
 	search_links(&id_block, (int32_t*) id_child, in_parent, search_blockid_diritems);
 
 	fs_seek_set(sb.addr_data + id_block * sb.block_size);
-	fs_read_directory_item(block, sizeof(struct directory_item), sb.count_dir_items);
+	fs_read_directory_item(block, sb.count_dir_items);
 	items = get_count_dirs(block);
 
 	if (items == 1) {
@@ -845,14 +681,14 @@ int destroy_inode(struct inode* old_inode) {
 	if (old_inode->item_type == Itemtype_directory) {
 		// read first block with records (should be the only link, when inode to delete is a directory)
 		fs_seek_set(sb.addr_data + old_inode->direct[0] * sb.block_size);
-		fs_read_directory_item(block, sizeof(struct directory_item), sb.count_dir_items);
+		fs_read_directory_item(block, sb.count_dir_items);
 
 		// ".." directory is on second place in records
 		id_parent = block[1].fk_id_inode;
 
 		// read parent inode
 		fs_seek_set(sb.addr_inodes + id_parent * sizeof(struct inode));
-		fs_read_inode(&in_parent, sizeof(struct inode), 1);
+		fs_read_inode(&in_parent, 1);
 
 		// delete record of 'old_inode' in its parent
 		delete_record_from_parent(&old_inode->id_inode, &in_parent);
@@ -869,7 +705,7 @@ int destroy_inode(struct inode* old_inode) {
 
 	// write cleared inode
 	fs_seek_set(sb.addr_inodes + old_inode->id_inode * sizeof(struct inode));
-	fs_write_inode(old_inode, sizeof(struct inode), 1);
+	fs_write_inode(old_inode, 1);
 
 	// turn on its bitmap field
 	bitmap_field_on(sb.addr_bm_inodes, old_inode->id_inode);
@@ -907,7 +743,7 @@ static int32_t init_block_(int32_t id_block) {
 
 		// write initialized block
 		fs_seek_set(sb.addr_data + id_block * sb.block_size);
-		fs_write_int32t(block, sizeof(int32_t), sb.count_links);
+		fs_write_int32t(block, sb.count_links);
 
 		fs_flush();
 	}
@@ -923,7 +759,7 @@ static int32_t clear_block_(int32_t id_block) {
 
 	// write initialized block
 	fs_seek_set(sb.addr_data + id_block * sb.block_size);
-	fs_write_char(block, sizeof(char), sb.block_size);
+	fs_write_char(block, sb.block_size);
 
 	fs_flush();
 
@@ -1009,7 +845,7 @@ static bool is_block_full_dirs(const int32_t id_block) {
 	struct directory_item block[sb.count_dir_items];
 
 	fs_seek_set(sb.addr_data + id_block * sb.block_size);
-	fs_read_directory_item(block, sizeof(struct directory_item), sb.count_dir_items);
+	fs_read_directory_item(block, sb.count_dir_items);
 	items = get_count_dirs(block);
 
 	// block is full of directory records
@@ -1030,7 +866,7 @@ static bool is_block_full_links(const int32_t id_block) {
 	int32_t block[sb.count_links];
 
 	fs_seek_set(sb.addr_data + id_block * sb.block_size);
-	fs_read_int32t(block, sizeof(int32_t), sb.count_links);
+	fs_read_int32t(block, sb.count_links);
 	items = get_count_links(block);
 
 	// block is full of directory records
@@ -1072,7 +908,7 @@ int32_t get_link(struct inode* source) {
 	// if new link was created, write the change to filesystem
 	if (is_new_link) {
 		fs_seek_set(sb.addr_inodes + source->id_inode * sizeof(struct inode));
-		fs_write_inode(source, sizeof(struct inode), 1);
+		fs_write_inode(source, 1);
 
 		fs_flush();
 	}

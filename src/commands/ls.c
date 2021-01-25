@@ -23,13 +23,13 @@ static int list_direct_links(const int32_t* links) {
 		// cache block with directory records pointed to by direct link
 		if (links[i] != FREE_LINK) {
 			fs_seek_set(sb.addr_data + links[i] * sb.block_size);
-			fs_read_directory_item(block, sizeof(struct directory_item), sb.count_dir_items);
+			fs_read_directory_item(block, sb.count_dir_items);
 			items = get_count_dirs(block);
 
 			// print names of records (directory + files)
 			for (j = 0; j < items; ++j) {
 				fs_seek_set(sb.addr_inodes + block[j].fk_id_inode * sizeof(struct inode));
-				fs_read_inode(&in_ls, sizeof(struct inode), 1);
+				fs_read_inode(&in_ls, 1);
 
 				if (in_ls.item_type == Itemtype_directory) {
 					printf("d %s%s\n", block[j].item_name, SEPARATOR);

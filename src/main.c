@@ -19,6 +19,7 @@ void signal_handler(int signum) {
 	exit(EXIT_SUCCESS);
 }
 
+
 int main(int argc, char const **argv) {
 	#if DEBUG
 	// Clion debugger output
