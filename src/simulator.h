@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include "fsop/fs_common.h"
 #include "fs_prompt.h"
 #include "inode.h"
 
@@ -35,17 +36,12 @@
 #define BUFF_CLR(dest, count)	memset(dest, '\0', count)
 #define isoverflow(c)			(!((c) == '\n' || (c) == '\0'))
 
-// is filesystem formatted or not
-bool is_formatted;
-// is simulation running or not
-bool is_running;
+bool is_formatted;		// is filesystem formatted or not
+bool is_running;		// is simulation running or not
 
-// filesystem name given by user. Does not change during runtime
-char fs_name[STRLEN_FSNAME];
-// filesystem pwd buffer
-char buff_pwd[BUFF_PWD_LENGTH];
-// current working directory prompt in console
-char buff_prompt[BUFF_PROMPT_LENGTH];
+char fs_name[STRLEN_FSNAME];			// fs name given by user
+char buff_pwd[BUFF_PWD_LENGTH];			// fs current working directory
+char buff_prompt[BUFF_PROMPT_LENGTH];	// prompt in console
 
 // filesystem file, which is being worked with
 FILE* filesystem;
@@ -54,9 +50,6 @@ FILE* filesystem;
 struct superblock sb = {0};
 // inode, where user currently is
 struct inode in_actual = {0};
-
-extern void init_filesystem(const char*, bool*);
-extern void close_filesystem();
 
 extern int pwd_();
 extern int cat_(const char*);
