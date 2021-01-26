@@ -6,7 +6,7 @@
 #include "fs_cache.h"
 
 
-void fs_seek_set(uint32_t offset) {
+static void fs_seek_set(uint32_t offset) {
 	if (offset > INT32_MAX) {
 		// this filesystem has max of 4 GB, so there is no need
 		// to have a loop for decreasing the offset and fseeking by steps
@@ -18,6 +18,11 @@ void fs_seek_set(uint32_t offset) {
 		fseek(filesystem, offset, SEEK_SET);
 	}
 }
+
+// void fs_seek_bm_inodes
+// void fs_seek_bm_blocks
+// void fs_seek_inodes
+// void fs_seek_blocks
 
 void fs_flush() {
 	fflush(filesystem);

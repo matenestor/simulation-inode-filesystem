@@ -8,7 +8,10 @@
 #include "inode.h"
 
 
-void fs_seek_set(uint32_t);
+void fs_seek_bm_inodes(const uint32_t);
+void fs_seek_bm_blocks(const uint32_t);
+void fs_seek_inodes(const uint32_t);
+void fs_seek_blocks(const uint32_t);
 void fs_flush();
 unsigned int fs_read_superblock(struct superblock*, size_t);
 unsigned int fs_read_inode(struct inode*, size_t);
