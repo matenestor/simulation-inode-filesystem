@@ -2,11 +2,12 @@
 #include <string.h>
 
 #include "simulator.h"
+#include "fs_api.h"
 #include "commands/commands.h"
 #include "utils.h"
 
-#include "../include/logger.h"
-#include "../include/errors.h"
+#include "logger.h"
+#include "errors.h"
 
 
 static void init_prompt() {
@@ -42,7 +43,7 @@ static int handle_input(char* command, char* arg1, char* arg2) {
 		}
 	}
 	else {
-	// empty input (EOF)
+		// empty input (EOF)
 		puts("");
 	}
 

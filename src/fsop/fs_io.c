@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "fs_io.h"
+#include "fs_api.h"
 #include "fs_cache.h"
 
 
@@ -19,13 +19,20 @@ static void fs_seek_set(uint32_t offset) {
 	}
 }
 
-// void fs_seek_bm_inodes
-// void fs_seek_bm_blocks
-// void fs_seek_inodes
-// void fs_seek_blocks
+void fs_seek_bm_inodes(const uint32_t index) {
+	fs_seek_set(sb.addr_bm_inodes + index);
+}
 
-void fs_flush() {
-	fflush(filesystem);
+void fs_seek_bm_data(const uint32_t index) {
+	fs_seek_set(sb.addr_bm_data + index);
+}
+
+void fs_seek_inodes(const uint32_t index) {
+	fs_seek_set(sb.addr_inodes + index);
+}
+
+void fs_seek_data(const uint32_t index) {
+	fs_seek_set(sb.addr_data + index);
 }
 
 unsigned int fs_read_superblock(struct superblock* buffer, const size_t count) {
@@ -74,4 +81,8 @@ unsigned int fs_write_bool(const bool* buffer, const size_t count) {
 
 unsigned int fs_write_char(const char* buffer, const size_t count) {
 	return fwrite(buffer, sizeof(char), count, filesystem);
+}
+
+void fs_flush() {
+	fflush(filesystem);
 }

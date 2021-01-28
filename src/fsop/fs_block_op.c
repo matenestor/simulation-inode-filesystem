@@ -1,3 +1,15 @@
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "fs_api.h"
+#include "fs_cache.h"
+#include "inode.h"
+
+#include "errors.h"
+#include "logger.h"
+
+
 static int search_block_inodeid(void*, int32_t*, const int32_t*, size_t);
 static int search_block_inodename(void*, int32_t*, const int32_t*, size_t);
 static int search_blockid_diritems(void*, int32_t*, const int32_t*, size_t);

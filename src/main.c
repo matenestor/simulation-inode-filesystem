@@ -4,8 +4,8 @@
 
 #include "main.h"
 
-#include "../include/logger.h"
-#include "../include/errors.h"
+#include "logger.h"
+#include "errors.h"
 
 
 void signal_handler(int signum) {

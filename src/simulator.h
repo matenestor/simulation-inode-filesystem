@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "fsop/fs_common.h"
 #include "fs_prompt.h"
 #include "inode.h"
 

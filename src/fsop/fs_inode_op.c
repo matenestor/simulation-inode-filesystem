@@ -1,3 +1,11 @@
+#include <stdint.h>
+
+#include "fs_api.h"
+#include "fs_cache.h"
+
+#include "errors.h"
+
+
 static int search_links(void*, int32_t*, const struct inode*, int (*)(void*, int32_t*, const int32_t*, const size_t));
 static int32_t init_link_();
 static int32_t init_block_(int32_t);

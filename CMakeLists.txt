@@ -6,15 +6,14 @@ set(CMAKE_C_STANDARD 99)
 include_directories(include)
 
 add_executable(KIV_ZOS_sp
+#        ~/tmp/tmp.c
         src/logger.c
         src/errors.c
 
-        src/main.c              src/main.h
-        src/simulator.c         src/simulator.h
-        src/fs_operations.c     src/fs_operations.h
-        src/utils.c             src/utils.h
+        src/main.c
+        src/simulator.c
+        src/utils.c
 
-        src/commands/commands.h
         src/commands/pwd.c
         src/commands/cat.c
         src/commands/ls.c
@@ -32,6 +31,9 @@ add_executable(KIV_ZOS_sp
         src/commands/format.c
         src/commands/debug.c
 
-        src/fsop/fs_io.c src/fsop/fs_io.h
-
-        src/fsop/fs_bitmap.c src/fsop/fs_bitmap.h)
+        src/fsop/fs_bitmap.c
+        src/fsop/fs_block_op.c
+        src/fsop/fs_common.c
+        src/fsop/fs_inode_op.c
+        src/fsop/fs_io.c
+        )

@@ -1,18 +1,11 @@
 #include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
 #include <unistd.h>
 
-#include "fs_common.h"
+#include "fs_api.h"
 #include "fs_cache.h"
-#include "fs_prompt.h"
-#include "fsop/fs_io.h"
-#include "fsop/fs_bitmap.h"
-#include "inode.h"
-#include "utils.h"
 
-#include "../include/logger.h"
-#include "../include/errors.h"
+#include "logger.h"
+#include "errors.h"
 
 
 void init_filesystem(const char* fsp, bool* is_formatted) {
