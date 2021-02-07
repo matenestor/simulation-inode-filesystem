@@ -1,148 +1,75 @@
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "fs_api.h"
 #include "fs_cache.h"
+#include "fs_prompt.h"
 #include "inode.h"
+#include "iteration_carry.h"
 
 #include "errors.h"
 #include "logger.h"
 
 
-static int search_block_inodeid(void*, int32_t*, const int32_t*, size_t);
-static int search_block_inodename(void*, int32_t*, const int32_t*, size_t);
-static int search_blockid_diritems(void*, int32_t*, const int32_t*, size_t);
-static int search_blockid_links(void*, int32_t*, const int32_t*, size_t);
-static int clear_blocks(int32_t*, size_t);
-static int clear_links(struct inode*);
-static bool is_block_full_dirs(int32_t);
-static bool is_block_full_links(int32_t);
+enum search_for {
+	search_id,
+	search_name,
+};
 
+//int init_block_with_directories_fs(const uint32_t id_block) {
+//	size_t i;
+//	struct directory_item block[sb.count_dir_items];
+//
+//	for (i = 0; i < sb.count_dir_items; i++) {
+//	    block->fk_id_inode = FREE_LINK;
+//		strncpy(block->item_name, "", STRLEN_ITEM_NAME);
+//	}
+//
+//	fs_write_directory_item(block, sb.count_dir_items, id_block);
+//	return RETURN_SUCCESS;
+//}
 
-/*
- *  Searches whole block with directory items for 'id' of inode with 'name'.
- *  When variable, which is looked for, is found, function returns 'RETURN_SUCCESS'.
- *
- *  'name'  -- Name of inode, which 'id' is searched for.
- *  'id'    -- Pointer to variable, where result will be stored.
- *  'links' -- Block with direct links pointing to blocks with directory items, which will be checked.
- *  'links_count' -- Count of links in 'links' block,
- */
-static int search_block_inodeid(void* _name, int32_t* id, const int32_t* links, size_t links_count) {
-	int ret = RETURN_FAILURE;
-	size_t i, j, items;
-	char* name = (char*) _name;
-
-	// array with directory items in block
-	struct directory_item block[sb.count_dir_items];
-
-	// check every link to block with directory items
-	for (i = 0; i < links_count; ++i) {
-		// other links are free
-		if (links[i] == FREE_LINK) {
-			continue;
-		}
-
-		fs_seek_set(sb.addr_data + links[i] * sb.block_size);
-		fs_read_directory_item(block, sb.count_dir_items);
-		items = get_count_dirs(block);
-
-		// loop over existing directory items
-		for (j = 0; j < items; ++j) {
-			// inode of directory item with name 'name' found
-			if (strcmp(name, block[j].item_name) == 0) {
-				*id = block[j].fk_id_inode;
-				ret = RETURN_SUCCESS;
-
-				log_info("Got item id [%d] by name [%s].", *id, name);
-
-				break;
-			}
-		}
+int init_block_with_directories(struct directory_item* block) {
+	for (size_t i = 0; i < sb.count_dir_items; i++) {
+		block[i].fk_id_inode = FREE_LINK;
+		strncpy(block[i].item_name, "", STRLEN_ITEM_NAME);
 	}
-
-	return ret;
+	return RETURN_SUCCESS;
 }
 
-/*
- *  Searches whole block with directory items for 'name' of inode with 'id'.
- *  When variable, which is looked for, is found, function returns 'RETURN_SUCCESS'.
- *
- *  'name'  -- Name of inode; a variable, where result will be stored.
- *  'id'    -- Id of inode, which is searched for.
- *  'links' -- Block with direct links pointing to blocks with directory items, which will be checked.
- *  'links_count' -- Count of links in 'links' block,
- */
-static int search_block_inodename(void* _name, int32_t* id, const int32_t* links, const size_t links_count) {
-	int ret = RETURN_FAILURE;
-	size_t i, j, items;
-	char* name = (char*) _name;
-
-	// array with directory items in block
+static bool search_block(const enum search_for search, const uint32_t* links,
+						 const size_t links_count, void* p_carry) {
+	bool ret = false;
+	size_t i, j;
+	struct carry_directory_item* carry = (struct carry_directory_item*) p_carry;
 	struct directory_item block[sb.count_dir_items];
 
 	// check every link to block with directory items
-	for (i = 0; i < links_count; ++i) {
+	for (i = 0; i < links_count && !ret; ++i) {
 		// other links are free
 		if (links[i] == FREE_LINK) {
 			continue;
 		}
+		fs_read_directory_item(block, sb.count_dir_items, links[i]);
 
-		fs_seek_set(sb.addr_data + links[i] * sb.block_size);
-		fs_read_directory_item(block, sb.count_dir_items);
-		items = get_count_dirs(block);
-
-		// loop over existing directory items
-		for (j = 0; j < items; ++j) {
-			// inode name with 'id' found
-			if (block[j].fk_id_inode == *id) {
-				strncpy(name, block[j].item_name, STRLEN_ITEM_NAME - 1);
-				ret = RETURN_SUCCESS;
-
-				log_info("Got item name [%s] by id [%d].", name, *id);
-
-				break;
+		// search directory items for wanted element
+		for (j = 0; j < sb.count_dir_items && !ret; ++j) {
+			// searching for ID
+			if (search == search_id) {
+				if (block[j].fk_id_inode == carry->id) {
+					strncpy(carry->name, block[j].item_name, STRLEN_ITEM_NAME);
+					log_info("Got item name [%s] by id [%d].", carry->name, carry->id);
+					ret = true;
+				}
 			}
-		}
-	}
-
-	return ret;
-}
-
-static int search_blockid_diritems(void* _id_block, int32_t* id, const int32_t* links, size_t links_count) {
-	int ret = RETURN_FAILURE;
-	size_t i, j, items;
-	int32_t* id_block = (int32_t*) _id_block;
-
-	// array with directory items in block
-	struct directory_item block[sb.count_dir_items];
-
-	// check every link to block with directory items
-	for (i = 0; i < links_count; ++i) {
-		// other links are free
-		if (links[i] == FREE_LINK) {
-			continue;
-		}
-		// id of block is link in inode, not in its block
-		else if (links[i] == *id) {
-			*id_block = links[i];
-			ret = RETURN_SUCCESS;
-		}
-		// id is in inode's blocks
-		else {
-			fs_seek_set(sb.addr_data + links[i] * sb.block_size);
-			fs_read_directory_item(block, sb.count_dir_items);
-			items = get_count_dirs(block);
-
-			// loop over existing directory items
-			for (j = 0; j < items; ++j) {
-				// inode name with 'id' found
-				if (block[j].fk_id_inode == *id) {
-					*id_block = links[i];
-					ret = RETURN_SUCCESS;
-
-					break;
+			// searching for NAME
+			else {
+				if (strcmp(carry->name, block[j].item_name) == 0) {
+					carry->id = block[j].fk_id_inode;
+					log_info("Got item id [%d] by name [%s].", carry->id, carry->name);
+					ret = true;
 				}
 			}
 		}
@@ -151,137 +78,157 @@ static int search_blockid_diritems(void* _id_block, int32_t* id, const int32_t* 
 	return ret;
 }
 
-static int search_blockid_links(void* _id_block, int32_t* id, const int32_t* links, size_t links_count) {
-	int ret = RETURN_FAILURE;
-	size_t i, j, items;
-	int32_t* id_block = (int32_t*) _id_block;
+/*
+ *  Search whole block with directory items for 'id' of inode with 'name'.
+ */
+ITERABLE(search_block_inode_id) {
+	return search_block(search_id, links, links_count, p_carry);
+}
 
-	// array with links in block
-	int32_t block[sb.count_dir_items];
+/*
+ *  Search whole block with directory items for 'name' of inode with 'id'.
+ */
+ITERABLE(search_block_inode_name) {
+	return search_block(search_name, links, links_count, p_carry);
+}
 
-	// check every link to block with directory items
+/*
+ * Delete directory item from block.
+ */
+ITERABLE(delete_block_item) {
+	size_t i, j;
+	struct directory_item block[sb.count_dir_items];
+	struct carry_directory_item* carry = (struct carry_directory_item*) p_carry;
+
 	for (i = 0; i < links_count; ++i) {
-		// other links are free
-		if (links[i] == FREE_LINK) {
+		if (links[i] == FREE_LINK)
 			continue;
-		}
-		// id of block is link in inode, not in its block
-		else if (links[i] == *id) {
-			*id_block = links[i];
-			ret = RETURN_SUCCESS;
-		}
-		// id is in inode's blocks
-		else {
-			fs_seek_set(sb.addr_data + links[i] * sb.block_size);
-			fs_read_int32t(block, sb.count_links);
-			items = get_count_links(block);
 
-			// loop over existing directory items
-			for (j = 0; j < items; ++j) {
-				// inode name with 'id' found
-				if (block[j] == *id) {
-					*id_block = links[i];
-					ret = RETURN_SUCCESS;
+		fs_read_directory_item(block, sb.count_dir_items, links[i]);
 
-					break;
-				}
+		for (j = 0; j < sb.count_dir_items; ++j) {
+			// record with id to delete found
+			if (block[j].fk_id_inode == carry->id) {
+				block[j].fk_id_inode = FREE_LINK;
+				strncpy(block[j].item_name, "", STRLEN_ITEM_NAME);
+				fs_write_directory_item(block, sb.count_dir_items, links[i]);
+				return true;
 			}
 		}
 	}
-
-	return ret;
-}
-
-static int clear_blocks(int32_t* links, const size_t size) {
-	for (size_t i = 0; i < size; ++i) {
-		if (links[i] != FREE_LINK) {
-			clear_block_(links[i]);
-			links[i] = FREE_LINK;
-		}
-	}
-
-	return 0;
-}
-
-static int clear_links(struct inode* source) {
-	size_t i, links_direct, links_indirect;
-
-	// block with direct links to be cleared
-	int32_t block_direct[sb.count_links];
-	// block with indirect links to be cleared
-	int32_t block_indirect[sb.count_links];
-
-	// first -- clear direct links
-	clear_blocks(source->direct, COUNT_DIRECT_LINKS);
-
-	// second -- clear indirect links of 1st level
-	// note: if count of indirect links lvl 1 needs to be bigger than 1 in future, this `if` is needed to be in loop
-	if (source->indirect1[0] != FREE_LINK) {
-		// read whole block with 1st level indirect links to blocks with data
-		fs_seek_set(sb.addr_data + source->indirect1[0] * sb.block_size);
-		fs_read_int32t(block_direct, sb.count_links);
-		links_direct = get_count_links(block_direct);
-
-		// clear all data blocks, which every direct link in block points at
-		clear_blocks(block_direct, links_direct);
-
-		// clear indirect link lvl 1 in inode
-		clear_block_(source->indirect1[0]);
-		source->indirect1[0] = FREE_LINK;
-	}
-
-	// third -- clear indirect links of 2nd level
-	// note: if count of indirect links lvl 2 needs to be bigger than 1 in future, this `if` is needed to be in loop
-	if (source->indirect2[0] != FREE_LINK) {
-		// read whole block with 2nd level indirect links to blocks with 1st level indirect links
-		fs_seek_set(sb.addr_data + source->indirect2[0] * sb.block_size);
-		fs_read_int32t(block_indirect, sb.count_links);
-		links_indirect = get_count_links(block_indirect);
-
-		// loop over each 2nd level indirect link to get blocks with 1st level indirect links
-		for (i = 0; i < links_indirect; ++i) {
-			fs_seek_set(sb.addr_data + block_indirect[i] * sb.block_size);
-			fs_read_int32t(block_direct, sb.count_links);
-			links_direct = get_count_links(block_direct);
-
-			// clear all data blocks, which every direct link in block points at
-			clear_blocks(block_direct, links_direct);
-
-			// clear indirect link lvl 1 in inode
-			clear_block_(block_indirect[i]);
-			block_indirect[i] = FREE_LINK;
-		}
-
-		// clear indirect link lvl 2 in inode
-		clear_block_(source->indirect2[0]);
-		source->indirect2[0] = FREE_LINK;
-	}
-
-	return 0;
+	return false;
 }
 
 /*
- *  Check if block is full of directory items.
- *  Returns true if block is full, else false.
+ * Check if there are other directories than "." and ".." in given blocks.
  */
-static bool is_block_full_dirs(const int32_t id_block) {
+ITERABLE(has_common_directories) {
+	size_t i, j;
 	struct directory_item block[sb.count_dir_items];
 
-	fs_seek_blocks(id_block);
-	fs_read_directory_item(block, sb.count_dir_items);
+	for (i = 0; i < links_count; ++i) {
+		if (links[i] == FREE_LINK)
+			continue;
 
-	return (bool) (get_count_dirs(block) == sb.count_dir_items);
+		fs_read_directory_item(block, sb.count_dir_items, links[i]);
+
+		for (j = 0; j < sb.count_dir_items; ++j) {
+			// other directory than "." and ".." found == directory is not empty
+			if (strcmp(block[j].item_name, ".") != 0
+				&& strcmp(block[j].item_name, "..") != 0) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 /*
- *  Check if block is full of links.
- *  Returns true if block is full, else false.
+ * List all items in given blocks.
  */
-static bool is_block_full_links(const int32_t id_block) {
-	int32_t block[sb.count_links];
+ITERABLE(list_items) {
+	size_t i, j;
+	struct inode inode_ls = {0};
+	struct directory_item block[sb.count_dir_items];
 
-	fs_seek_blocks(id_block);
-	fs_read_int32t(block, sb.count_links);
+	for (i = 0; i < links_count; ++i) {
+		if (links[i] == FREE_LINK)
+			continue;
 
-	return (bool) (get_count_links(block); == sb.count_links);
+		fs_read_directory_item(block, sb.count_dir_items, links[i]);
+
+		for (j = 0; j < sb.count_dir_items; ++j) {
+//			printf(" %s\n", block[j].item_name);
+
+			// just a fancy thing -- print if item is file or directory
+			fs_read_inode(&inode_ls, 1, block[j].fk_id_inode);
+
+			if (inode_ls.inode_type == Inode_type_file) {
+				printf("- %s\n", block[j].item_name);
+			}
+			else if (inode_ls.inode_type == Inode_type_dirc) {
+				printf("d %s%s\n", block[j].item_name, SEPARATOR);
+			}
+			// never should get here (but i got here during development, so from now,
+			// i am covering all possible cases, even when they seem impossible)
+			else {
+				fprintf(stderr, "! %s [%d] leftover.\n",
+						block[j].item_name, block[j].fk_id_inode);
+			}
+		}
+	}
+	// always return false, so all links are iterated
+	return false;
 }
+
+// PROBABLY NOT NEEDED AT ALL -------------------------------------------------
+
+///*
+// *  Get count of links in indirect links block.
+// */
+//  // TODO if needed, check whole block
+//size_t get_count_links(int32_t* source) {
+//	size_t items = 0;
+//	int32_t* p_link = source;
+//
+//	while (*p_link != FREE_LINK && items < sb.count_links) {
+//		++p_link;
+//		++items;
+//	}
+//
+//	return items;
+//}
+//
+///*
+// *  Get count of directory records in directory block.
+// */
+//  // TODO if needed, check whole block
+//size_t get_count_dirs(struct directory_item* source) {
+//	size_t items = 0;
+//	struct directory_item* p_dir = source;
+//
+//	while (strcmp(p_dir->item_name, "") != 0 && items < sb.count_dir_items) {
+//		++p_dir;
+//		++items;
+//	}
+//
+//	return items;
+//}
+//
+///*
+// *  Check if block is full of directory items.
+// */
+//static bool is_block_full_dirs(const int32_t id_block) {
+//	struct directory_item block[sb.count_dir_items];
+//	fs_read_directory_item(block, sb.count_dir_items, id_block);
+//	return (bool) (get_count_dirs(block) == sb.count_dir_items);
+//}
+//
+///*
+// *  Check if block is full of links.
+// */
+//static bool is_block_full_links(const int32_t id_block) {
+//	int32_t block[sb.count_links];
+//	fs_read_link(block, sb.count_links, id_block);
+//	return (bool) (get_count_links(block) == sb.count_links);
+//}

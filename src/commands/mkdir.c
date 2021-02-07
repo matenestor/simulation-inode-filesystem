@@ -1,13 +1,12 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "../fs_operations.h"
-#include "../utils.h"
+#include "fs_api.h"
 #include "fs_cache.h"
 #include "inode.h"
 
-#include "../../include/logger.h"
-#include "../../include/errors.h"
+#include "logger.h"
+#include "errors.h"
 
 
 /*
@@ -40,7 +39,7 @@ static bool is_mkdir_possible(const char* path, const char* path_parent) {
  * 	in parent inode and data block.
  *
  */
-int mkdir_(const char* path) {
+int sim_mkdir(const char* path) {
 	int ret = RETURN_FAILURE;
 
 	log_info("mkdir: creating [%s]", path);
@@ -63,23 +62,22 @@ int mkdir_(const char* path) {
 	struct directory_item dirs[sb.count_dir_items];
 
 	// separate path to parent directory from new directory name
-	parse_parent_path(path_parent, path);
+	my_dirname(path_parent, path);
 
 	if (strlen(path) > 0) {
 		// get name -- last element in path
-		if (parse_name(dir_name, path, STRLEN_ITEM_NAME) != RETURN_FAILURE) {
+		if (my_basename(dir_name, path, STRLEN_ITEM_NAME) != RETURN_FAILURE) {
 			// check if it is possible to make new directory
 			if (is_mkdir_possible(path, path_parent)) {
 				// get parent inode, where new directory should be created in
 				if (get_inode_by_path(&in_parent, path_parent) != RETURN_FAILURE) {
 					// get link to block in parent, where new directory will be written to
-					if ((id_block = get_link(&in_parent)) != RETURN_FAILURE) {
+					if ((id_block = get_empty_link(&in_parent, 1)) != RETURN_FAILURE) {
 						// create inode for new directory record
-						if (create_inode(&in_new_dir, Itemtype_directory, in_parent.id_inode) != RETURN_FAILURE) {
+						if (create_inode_directory(&in_new_dir, in_parent.id_inode) != RETURN_FAILURE) {
 							// cache block where the record of new directory will be stored
-							fs_seek_set(sb.addr_data + id_block * sb.block_size);
-							fs_read_directory_item(dirs, sb.count_dir_items);
-							items = get_count_dirs(dirs);
+							fs_read_directory_item(dirs, sb.count_dir_items, id_block);
+//							items = get_count_dirs(dirs);
 
 							// init new directory
 							strncpy(new_dir.item_name, dir_name, strlen(dir_name) + 1);
@@ -89,8 +87,7 @@ int mkdir_(const char* path) {
 							dirs[items] = new_dir;
 
 							// write updated block
-							fs_seek_set(sb.addr_data + id_block * sb.block_size);
-							fs_write_directory_item(dirs, items + 1);
+							fs_write_directory_item(dirs, items + 1, id_block);
 
 							fs_flush();
 

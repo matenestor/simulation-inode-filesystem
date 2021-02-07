@@ -31,16 +31,16 @@
 					"    Other arguments are discarded. Arguments in [] brackets are optional.\n"
 
 // input buffer size for user
-#define BUFF_IN_LENGTH			1024
-#define BUFF_CLR(dest, count)	memset(dest, '\0', count)
-#define isoverflow(c)			(!((c) == '\n' || (c) == '\0'))
+#define BUFFER_INPUT_LENGTH			2048 // enough space to fill 80x24 screen and a bit more
+#define BUFFER_CLEAR(dest, count)	memset(dest, '\0', count)
+#define isoverflow(c)				(!((c) == '\n' || (c) == '\0'))
 
 bool is_formatted;		// is filesystem formatted or not
 bool is_running;		// is simulation running or not
 
-char fs_name[STRLEN_FSNAME];			// fs name given by user
-char buff_pwd[BUFF_PWD_LENGTH];			// fs current working directory
-char buff_prompt[BUFF_PROMPT_LENGTH];	// prompt in console
+char fs_name[STRLEN_FS_NAME];			// fs name given by user
+char buff_pwd[STRLEN_PWD_LENGTH];		// fs current working directory
+char buff_prompt[BUFFER_PROMPT_LENGTH];	// prompt in console
 
 // filesystem file, which is being worked with
 FILE* filesystem;
@@ -50,21 +50,21 @@ struct superblock sb = {0};
 // inode, where user currently is
 struct inode in_actual = {0};
 
-extern int pwd_();
-extern int cat_(const char*);
-extern int ls_(const char*);
-extern int info_(const char*);
-extern int mv_(const char*, const char*);
-extern int cp_(const char*, const char*);
-extern int rm_(const char*);
-extern int cd_(const char*);
-extern int mkdir_(const char*);
-extern int rmdir_(const char*);
-extern int incp_(const char*, const char*);
-extern int outcp_(const char*, const char*);
-extern int load_(const char*);
-extern int fsck_();
-extern int format_(const char*, const char*);
-extern int debug_(const char*);
+extern int sim_pwd();
+extern int sim_cat(const char*);
+extern int sim_ls(const char*);
+extern int sim_info(const char*);
+extern int sim_mv(const char*, const char*);
+extern int sim_cp(const char*, const char*);
+extern int sim_rm(const char*);
+extern int sim_cd(const char*);
+extern int sim_mkdir(const char*);
+extern int sim_rmdir(const char*);
+extern int sim_incp(const char*, const char*);
+extern int sim_outcp(const char*, const char*);
+extern int sim_load(const char*);
+extern int sim_fsck();
+extern int sim_format(const char*, const char*);
+extern int sim_debug(const char*);
 
 #endif

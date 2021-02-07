@@ -4,7 +4,7 @@
 #include "errors.h"
 
 
-int load_(const char* arg1) {
+int sim_load(const char* arg1) {
 	int ret = RETURN_FAILURE;
 	return ret;
 }

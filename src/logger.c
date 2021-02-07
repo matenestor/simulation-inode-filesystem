@@ -3,18 +3,19 @@
 #include <time.h>
 #include <sys/stat.h>
 
-#include "../include/logger.h"
+#include "logger.h"
 
 #define LOG_BUFF_SIZE_			1024 			// size of buffer for logging
 #define LOG_DATETIME_LENGTH_	22				// length of datetime string + \0
 #define LOG_FNAME_				"inode.log"		// log file name
+#define LOG_FORMAT_				"[%Y-%m-%d %H:%M:%S]"	// datetime format of messages
 
-#define LOG_FATAL_		"[FATAL]  "
-#define LOG_ERROR_		"[ERROR]  "
-#define LOG_WARNING_	"[WARNING]"
-#define LOG_INFO_		"[INFO]   "
-#define LOG_DEBUG_		"[DEBUG]  "
-#define LOG_TRACE_		"[TRACE]  "
+#define LOG_CRITICAL_	"[CRITICAL] "
+#define LOG_ERROR_		"[ERROR] "
+#define LOG_WARNING_	"[WARN]  "
+#define LOG_INFO_		"[INFO]  "
+#define LOG_DEBUG_		"[DEBUG] "
+#define LOG_TRACE_		"[TRACE] "
 
 
 static char buff[LOG_BUFF_SIZE_];	// buffering messages for logging
@@ -53,7 +54,7 @@ static void get_datetime(char* datetime) {
 	// get time
 	t = time(NULL);
 	tm_info = localtime(&t);
-	strftime(datetime, LOG_DATETIME_LENGTH_, "[%Y-%m-%d %H:%M:%S]", tm_info);
+	strftime(datetime, LOG_DATETIME_LENGTH_, LOG_FORMAT_, tm_info);
 }
 
 static void log_msg(const char* severity) {
@@ -67,13 +68,13 @@ static void log_msg(const char* severity) {
 
 // ======   LOG MESSAGES   ====================================================
 
-void log_fatal(const char* msg, ...) {
-	if (log_level >= Log_Fatal && log_file != NULL) {
+void log_critical(const char* msg, ...) {
+	if (log_level >= Log_Critical && log_file != NULL) {
 		va_list args;
 		va_start(args, msg);
 		vsnprintf(buff, LOG_BUFF_SIZE_, msg, args);
 		va_end(args);
-		log_msg(LOG_FATAL_);
+		log_msg(LOG_CRITICAL_);
 	}
 }
 

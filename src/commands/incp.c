@@ -1,14 +1,14 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "fs_api.h"
 #include "inode.h"
 
-#include "../../include/logger.h"
-#include "../../include/errors.h"
-#include "../fs_operations.h"
+#include "logger.h"
+#include "errors.h"
 
 
-int incp_(const char* source, const char* target) {
+int sim_incp(const char* source, const char* target) {
 	int ret = RETURN_FAILURE;
 	struct inode in_target = {0};
 
@@ -19,7 +19,7 @@ int incp_(const char* source, const char* target) {
 			if (get_inode_by_path(&in_target, target) != RETURN_FAILURE) {
 				// todo fopen 'source' file and copy into inode
 			}
-			else if (create_inode(&in_target, Itemtype_file, 0 /* 0 here is wrong, should be id_parent */)) {
+			else if (create_inode_file(&in_target)) {
 				// todo GET ID OF PARENT
 				// todo fopen 'source' file and copy into inode
 			}

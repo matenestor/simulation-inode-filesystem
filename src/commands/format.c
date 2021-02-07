@@ -5,21 +5,31 @@
 #include <string.h>
 #include <time.h>
 
+#include "fs_api.h"
 #include "fs_cache.h"
 #include "inode.h"
-#include "../fs_operations.h"
 
-#include "../../include/logger.h"
-#include "../../include/errors.h"
+#include "logger.h"
+#include "errors.h"
 
-#define LOG_DATETIME_LENGTH_	25
-#define FS_SIZE_MAX				4095	// maximal filesystem size in megabytes MB (using 32b integers)
+// --- FILESYSTEM CONFIG
+#define FS_SIZE_MAX				4095	// maximal filesystem size in MB (because using 32b ints)
 #define FS_BLOCK_SIZE			1024	// filesystem block size in bytes B
 #define PERCENTAGE				0.95	// percentage of space for data in filesystem
+#define CACHE_SIZE				131072	// cache size for fwriting and freading (128 kB) TODO 1 MB with malloc?
+// --- FILESYSTEM CONFIG
+
+#define LOG_DATETIME_LENGTH_	25
 #define mb2b(mb)				((mb)*1024UL*1024UL)
 #define isnegnum(cha)			(cha[0] == '-')
 #define isinrange(n)			((n) > 0 && (n) <= FS_SIZE_MAX)
 
+extern size_t fs_write_superblock(const struct superblock*);
+extern size_t format_write_bool(const bool*, size_t);
+extern size_t format_write_inode(const struct inode*, size_t);
+extern size_t format_write_char(const char*, size_t);
+extern size_t format_write_directory_item(const struct directory_item*, size_t);
+extern void format_root_bm_off();
 
 /*
  * Check if string is convertible to number.
@@ -42,10 +52,8 @@ static bool isnumeric(const char* num) {
 }
 
 static void get_datetime(char* datetime) {
-	time_t t;
-	struct tm* tm_info;
-	t = time(NULL);
-	tm_info = localtime(&t);
+	time_t t = time(NULL);
+	struct tm* tm_info = localtime(&t);
 	strftime(datetime, LOG_DATETIME_LENGTH_, "%Y-%m-%d %H:%M:%S", tm_info);
 }
 
@@ -74,7 +82,7 @@ static int is_valid_size(const char* num_str, uint32_t* size) {
 		goto fail;
 	}
 
-	*size = (size_t) num;
+	*size = (uint32_t) num;
 	return RETURN_SUCCESS;
 
 fail:
@@ -103,7 +111,7 @@ static int init_superblock(const int size, const uint32_t block_cnt) {
 	sb.disk_size = size;
 	sb.block_size = FS_BLOCK_SIZE;
 	sb.block_count = block_cnt;
-	sb.count_links = sb.block_size / sizeof(int32_t);
+	sb.count_links = sb.block_size / sizeof(uint32_t);
 	sb.count_dir_items = sb.block_size / sizeof(struct directory_item);
 	sb.addr_bm_inodes = addr_bm_in;
 	sb.addr_bm_data = addr_bm_dat;
@@ -111,7 +119,7 @@ static int init_superblock(const int size, const uint32_t block_cnt) {
 	sb.addr_data = addr_dat;
 
 	// write superblock to file
-	fs_write_superblock(&sb, sizeof(struct superblock), 1);
+	fs_write_superblock(&sb);
 	fs_flush();
 	puts("done");
 
@@ -119,25 +127,20 @@ static int init_superblock(const int size, const uint32_t block_cnt) {
 }
 
 static int init_bitmap(const size_t block_cnt) {
-	size_t i;
+	size_t i, batch;
 	size_t loops = block_cnt / CACHE_SIZE;
 	size_t over_fields = block_cnt % CACHE_SIZE;
-	// count of field to be read
-	size_t batch = loops > 0 ? CACHE_SIZE : over_fields;
-	bool bitmap[batch];
+	bool bitmap[CACHE_SIZE];
 
 	printf("init: bitmap.. ");
 
-	// first loop is done manually, because very first field is set to 'false'
-	memset(bitmap, true, batch);
-	bitmap[0] = false;
-	fs_write_bool(bitmap, sizeof(bool), batch);
-	bitmap[0] = true;
+	// all field are available
+	memset(bitmap, true, CACHE_SIZE);
 
 	// init rest of the bitmap
-	for (i = 1; i <= loops; ++i) {
+	for (i = 0; i <= loops; ++i) {
 		batch = i < loops ? CACHE_SIZE : over_fields;
-		fs_write_bool(bitmap, sizeof(bool), batch);
+		format_write_bool(bitmap, batch);
 	}
 
 	fs_flush();
@@ -162,61 +165,35 @@ static int init_inodes(const size_t block_cnt) {
 
 	printf("init: inodes.. ");
 
-	// --- init root inode
-
-	in.id_inode = 0;
-	in.item_type = Itemtype_directory;
-	in.file_size = FS_BLOCK_SIZE;
-	// root inode point to data block on index 0
-	in.direct[0] = 0;
-	// set links root inode
-	for (i = 1; i < COUNT_DIRECT_LINKS; ++i) {
+	// init empty inode
+	in.inode_type = Inode_type_free;
+	in.file_size = 0;
+	for (i = 0; i < COUNT_DIRECT_LINKS; ++i) {
 		in.direct[i] = FREE_LINK;
 	}
 	for (i = 0; i < COUNT_INDIRECT_LINKS_1; ++i) {
-		in.indirect1[i] = FREE_LINK;
+		in.indirect_1[i] = FREE_LINK;
 	}
 	for (i = 0; i < COUNT_INDIRECT_LINKS_2; ++i) {
-		in.indirect2[i] = FREE_LINK;
+		in.indirect_2[i] = FREE_LINK;
 	}
 
-	// cache root inode to local array for future FS_WRITE
-	memcpy(&inodes[0], &in, sizeof(struct inode));
-	// and to simulator cache
-	memcpy(&in_actual, &in, sizeof(struct inode));
-
-	// --- set free inodes
-
-	// reset values for rest of the inodes
-	in.item_type = Itemtype_free;
-	in.file_size = 0;
-	in.direct[0] = FREE_LINK;
-
-	// cache rest of inodes to local array for future FS_WRITE
-	for (i = 1; i < batch; ++i) {
-		in.id_inode = i;
+	// cache inodes to local array for future FS_WRITE
+	for (i = 0; i < batch; ++i) {
 		memcpy(&inodes[i], &in, sizeof(struct inode));
 	}
 
-	// --- write everything
-
-	// first loop is done manually, because very first inode is root
-	fs_write_inode(inodes, sizeof(struct inode), batch);
-
-	// rewrite first 'root' inode in cache array to free inode
-	memcpy(&inodes[0], &in, sizeof(struct inode));
-
-	// write rest of the inodes
-	for (i = 1; i <= loops; ++i) {
+	// write everything
+	for (i = 0; i <= loops; ++i) {
 		batch = i < loops ? cache_capacity : over_inodes;
-
 		// initialize new inode ids
-		for (j = 0; j < batch; ++j) {
-			// really 'cache_capacity', not 'batch'
+		// NOTE: inode ids start at 1!
+		for (j = 1; j <= batch; ++j) {
+			// really 'cache_capacity', not 'batch',
+			// because of last cycle, where 'batch' == 'over_inodes
 			inodes[j].id_inode = j + i*cache_capacity;
 		}
-
-		fs_write_inode(inodes, sizeof(struct inode), batch);
+		format_write_inode(inodes, batch);
 	}
 
 	fs_flush();
@@ -225,55 +202,59 @@ static int init_inodes(const size_t block_cnt) {
 	return RETURN_SUCCESS;
 }
 
-
 static int init_blocks(const uint32_t fs_size) {
-	size_t i;
+	size_t i, batch;
 	// how much bytes is missing till end of filesystem
 	// after meta part -- empty space part + data part
 	uint32_t remaining_part = mb2b(fs_size) - ftell(filesystem);
+	size_t loops = remaining_part / CACHE_SIZE;
 	// helper array to be filled from
 	char zeros[CACHE_SIZE] = {0};
-
-	// variables for printing percentage, so it doesn't look like nothing is happening
-	size_t loops = remaining_part / CACHE_SIZE;
+	// for printing percentage, so it doesn't look like nothing is happening
 	size_t percent5 = loops / 20 + 1;
 
-	printf("init: data blocks.. 0 %%");
-
 	// fill rest of filesystem with batches of zeros
-	for (i = 1; i <= loops; ++i) {
-		fs_write_char(zeros, sizeof(char), CACHE_SIZE);
+	for (i = 0; i <= loops; ++i) {
+		batch = i < loops ? CACHE_SIZE : remaining_part % CACHE_SIZE;
+		format_write_char(zeros, batch);
 
 		if (i % percent5 == 0)
-			printf("\rinit: data block.. %d %%", (int) (((float) i / loops)*100));
+			printf("\rinit: data blocks.. %d %%", (int) (((float) i / loops)*100));
 	}
-	// fill zeros left till very end of filesystem (over fields)
-	fs_write_char(zeros, sizeof(char), remaining_part % CACHE_SIZE);
 	fs_flush();
 	puts("\rinit: data blocks.. done");
 
 	return RETURN_SUCCESS;
 }
 
+static int init_root() {
+	struct inode in = {0};
+	// root inode has id=1 and is on filesystem index=1 (0 is nothing)
+	struct directory_item di[2] = {{1, "."}, {1, ".."}};
 
-static int init_root_dir() {
-	// root directory items
-	struct directory_item di[2] = {0};
+	printf("init: root.. ");
 
-	// init directories in root directory (fk_id_inode is already set to 0 by init)
-	strncpy(di[0].item_name, ".", 1);
-	strncpy(di[1].item_name, "..", 2);
+	// root inode
+	fs_read_inode(&in, 1, 0);
+	in.inode_type = Inode_type_dirc;
+	in.direct[0] = 1;
 
-	// write root directory items to file
-	fs_seek_set(sb.addr_data);
-	fs_write_directory_item(di, sizeof(struct directory_item), 2);
+	// turn off root bitmap fields
+	format_root_bm_off();
+	// write root inode
+	format_write_inode(&in, 1);
+	// write root data block ('/' dir)
+	format_write_directory_item(di, 2);
 	fs_flush();
+
+	// cache root inode to simulation cache
+	memcpy(&in_actual, &in, sizeof(struct inode));
+	puts("done");
 
 	return RETURN_SUCCESS;
 }
 
-
-int format_(const char* fs_size_str, const char* path) {
+int sim_format(const char* fs_size_str, const char* path) {
 	int ret = RETURN_FAILURE;
 	// necessary step with double type variable for precision
 	double dt_percentage = 0;
@@ -293,7 +274,7 @@ int format_(const char* fs_size_str, const char* path) {
 			init_bitmap(block_cnt); // data blocks
 			init_inodes(block_cnt);
 			init_blocks(fs_size);
-			init_root_dir();
+			init_root();
 
 			printf("format: filesystem formatted, size: %d MB\n", fs_size);
 			log_info("format: Filesystem [%s] with size [%d MB] formatted.", path, fs_size);

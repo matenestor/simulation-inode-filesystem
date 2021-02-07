@@ -4,7 +4,7 @@
 #include "errors.h"
 
 
-int cat_(const char* arg1) {
+int sim_cat(const char* arg1) {
 	int ret = RETURN_FAILURE;
 	return ret;
 }

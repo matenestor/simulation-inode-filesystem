@@ -7,16 +7,16 @@
 // = 12 chars in total for item name
 #define STRLEN_ITEM_NAME 12
 
-#define FREE_LINK -1
+#define FREE_LINK 				0
 #define COUNT_DIRECT_LINKS		5
 #define COUNT_INDIRECT_LINKS_1	1
 #define COUNT_INDIRECT_LINKS_2	1
 
-// types of items available in filesystem
+// types of inodes in filesystem
 enum item {
-	Itemtype_free,
-	Itemtype_file,
-	Itemtype_directory
+	Inode_type_free,	// free, not occupied
+	Inode_type_file,	// file inode
+	Inode_type_dirc,	// directory inode
 };
 
 struct superblock {
@@ -34,21 +34,24 @@ struct superblock {
 };
 
 struct inode {
-	uint32_t id_inode;							// i-node id
-	enum item item_type;						// type of item in filesystem
-	uint32_t file_size;							// size of file
-	int32_t direct[COUNT_DIRECT_LINKS];			// direct links
-	int32_t indirect1[COUNT_INDIRECT_LINKS_1];	// indirect links level 1 (pointer-data)
-												//  note: in some functions in fs_operations.c,
-												//   the code uses only first link
-	int32_t indirect2[COUNT_INDIRECT_LINKS_2];	// indirect links level 2 (pointer-pointer-data)
-												//  note: in some functions in fs_operations.c,
-												//   the code uses only first link
+	uint32_t id_inode;								// i-node id
+	enum item inode_type;							// type of item in filesystem
+	uint32_t file_size;								// size of file
+	uint32_t direct[COUNT_DIRECT_LINKS];			// direct links
+	uint32_t indirect_1[COUNT_INDIRECT_LINKS_1];	// indirect links level 1 (pointer-data)
+	uint32_t indirect_2[COUNT_INDIRECT_LINKS_2];	// indirect links level 2 (pointer-pointer-data)
 };
 
 struct directory_item {
-	char item_name[STRLEN_ITEM_NAME];	// name of item in directory
 	uint32_t fk_id_inode;				// i-node of file
+	char item_name[STRLEN_ITEM_NAME];	// name of item in directory
 };
 
 #endif
+
+/*
+def max_filesize(d, in1, in2, block):
+    cl = block // 4
+    x = (d + in1*cl + in2*cl*cl) * block
+    print(f'{x} B\n{x//1024} KB\n{x//1024//1024} MB')
+*/

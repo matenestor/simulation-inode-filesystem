@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <string.h>
+#include <libgen.h>
 
 #include "simulator.h"
 #include "fs_api.h"
 #include "commands/commands.h"
-#include "utils.h"
 
 #include "logger.h"
 #include "errors.h"
@@ -14,7 +14,7 @@ static void init_prompt() {
 	// create initial pwd, 2 for null terminator
 	strncpy(buff_pwd, SEPARATOR, 2);
 	// create prompt
-	snprintf(buff_prompt, BUFF_PROMPT_LENGTH, FORMAT_PROMPT, fs_name, buff_pwd);
+	snprintf(buff_prompt, BUFFER_PROMPT_LENGTH, FORMAT_PROMPT, fs_name, buff_pwd);
 }
 
 static int handle_input(char* command, char* arg1, char* arg2) {
@@ -23,22 +23,22 @@ static int handle_input(char* command, char* arg1, char* arg2) {
 	// discard char
 	static int c = 0;
 	// program buffer for user's inputs; 3x more for 'command', 'arg1' and 'arg2'
-	static char buff_in[3 * BUFF_IN_LENGTH] = {0};
+	static char buff_in[3 * BUFFER_INPUT_LENGTH] = {0};
 
 	// receive valid input from user, prevent empty of large input
-	if ((fgets(buff_in, 3 * BUFF_IN_LENGTH, stdin) != NULL)) {
+	if ((fgets(buff_in, 3 * BUFFER_INPUT_LENGTH, stdin) != NULL)) {
 		// prevent overflowing input, so it doesn't go to next cycle
-		if (isoverflow(buff_in[3 * BUFF_IN_LENGTH - 2])) {
+		if (isoverflow(buff_in[3 * BUFFER_INPUT_LENGTH - 2])) {
 			// discard everything in stdin and move on
 			while ((c = fgetc(stdin)) != '\n' && c != EOF);
 			puts("input too large");
 		}
 		// input from user is ok, so scan it
 		else if (sscanf(buff_in, "%s %s %s", command, arg1, arg2) > 0) {
-			// in case some word is longer than BUFF_IN_LENGTH
-			command[BUFF_IN_LENGTH - 1] = '\0';
-			arg1[BUFF_IN_LENGTH - 1] = '\0';
-			arg2[BUFF_IN_LENGTH - 1] = '\0';
+			// in case some word is longer than BUFFER_INPUT_LENGTH
+			command[BUFFER_INPUT_LENGTH - 1] = '\0';
+			arg1[BUFFER_INPUT_LENGTH - 1] = '\0';
+			arg2[BUFFER_INPUT_LENGTH - 1] = '\0';
 			ret = RETURN_SUCCESS;
 		}
 	}
@@ -50,8 +50,8 @@ static int handle_input(char* command, char* arg1, char* arg2) {
 	return ret;
 }
 
-static void sim_format(const char* arg1) {
-	if (format_(arg1, fs_name) == RETURN_FAILURE) {
+static void sim_format_(const char* arg1) {
+	if (sim_format(arg1, fs_name) == RETURN_FAILURE) {
 		is_formatted = false;
 		my_perror(CMD_FORMAT);
 		reset_myerrno();
@@ -70,29 +70,26 @@ static void sim_exit() {
 	is_running = false;
 }
 
-int init_simulation(int argc, char const **argv) {
-	if (argc <= 1) {
-		set_myerrno(Err_fs_name_missing);
-		goto fail;
-	}
-	if (strlen(argv[1]) >= STRLEN_FSPATH) {
-		set_myerrno(Err_fs_name_long);
-		fprintf(stderr, "! Maximal length of path is %d characters.\n", STRLEN_FSPATH);
-		goto fail;
-	}
-	// parse filesystem name from given path
-	if (parse_name(fs_name, argv[1], STRLEN_FSNAME) == RETURN_FAILURE) {
-		set_myerrno(Err_fs_name_long);
-		fprintf(stderr, "! Maximal length of filesystem name is %d characters.\n", STRLEN_FSNAME);
-		goto fail;
-	}
-	// init filesystem
-	init_filesystem(argv[1], &is_formatted);
-	init_prompt();
+int init_simulation(const char* path) {
+	int ret = RETURN_FAILURE;
+	char fs_path[strlen(path) + 1];
+	char* p_basename = NULL;
+	// basename modifies its argument -- puts \0 after end of the base name
+	// in path and returns pointer on position where the base name starts...
+	strncpy(fs_path, path, strlen(path) + 1);
+	p_basename = basename(fs_path);
 
-	return RETURN_SUCCESS;
-fail:
-	return RETURN_FAILURE;
+	strncpy(fs_name, p_basename, strlen(p_basename) + 1);
+
+	if (strlen(p_basename) < STRLEN_FS_NAME) {
+		init_prompt();
+		ret = init_filesystem(fs_path, &is_formatted);
+	}
+	else {
+		set_myerrno(Err_fs_name_long);
+		fprintf(stderr, "! Maximal length of filesystem name is %d characters.\n", STRLEN_FS_NAME);
+	}
+	return ret;
 }
 
 int get_command_id(const char* command) {
@@ -127,9 +124,9 @@ int get_command_id(const char* command) {
 void run() {
 	int error = RETURN_FAILURE;
 	int cmd_id = 0;
-	char command[BUFF_IN_LENGTH] = {0};
-	char arg1[BUFF_IN_LENGTH] = {0};
-	char arg2[BUFF_IN_LENGTH] = {0};
+	char command[BUFFER_INPUT_LENGTH] = {0};
+	char arg1[BUFFER_INPUT_LENGTH] = {0};
+	char arg2[BUFFER_INPUT_LENGTH] = {0};
 	is_running = true;
 
 	while (is_running) {
@@ -137,16 +134,16 @@ void run() {
 
 		// clear buffers, so command doesn't accidentally receive
 		// wrong argument(s) from previous iteration
-		BUFF_CLR(command, strlen(command));
-		BUFF_CLR(arg1, strlen(arg1));
-		BUFF_CLR(arg2, strlen(arg2));
+		BUFFER_CLEAR(command, strlen(command));
+		BUFFER_CLEAR(arg1, strlen(arg1));
+		BUFFER_CLEAR(arg2, strlen(arg2));
 
 		if (handle_input(command, arg1, arg2) == RETURN_SUCCESS) {
 			cmd_id = get_command_id(command);
 
 			// only basic commands allowed before formatting
 			switch (cmd_id) {
-				case CMD_FORMAT_ID: sim_format(arg1);	continue;
+				case CMD_FORMAT_ID: sim_format_(arg1);	continue;
 				case CMD_HELP_ID:	sim_help();			continue;
 				case CMD_EXIT_ID:	sim_exit();			continue;
 				default:
@@ -159,21 +156,21 @@ void run() {
 
 			// all commands allowed, when filesystem is formatted
 			switch (cmd_id) {
-				case CMD_PWD_ID:	error = pwd_();				break;
-				case CMD_CAT_ID:	error = cat_(arg1);			break; // TODO
-				case CMD_LS_ID:		error = ls_(arg1);			break; // TODO
-				case CMD_INFO_ID:	error = info_(arg1);		break;
-				case CMD_MV_ID:		error = mv_(arg1, arg2);	break; // TODO
-				case CMD_CP_ID:		error = cp_(arg1, arg2);	break; // TODO
-				case CMD_RM_ID:		error = rm_(arg1);			break; // TODO
-				case CMD_CD_ID:		error = cd_(arg1);			break;
-				case CMD_MKDIR_ID:	error = mkdir_(arg1);		break;
-				case CMD_RMDIR_ID:	error = rmdir_(arg1);		break;
-				case CMD_INCP_ID:	error = incp_(arg1, arg2);	break; // TODO
-				case CMD_OUTCP_ID:	error = outcp_(arg1, arg2);	break; // TODO
-				case CMD_LOAD_ID:	error = load_(arg1);		break; // TODO
-				case CMD_FSCK_ID:	error = fsck_();			break; // TODO
-				case CMD_DEBUG_ID:	error = debug_(arg1);		break;
+				case CMD_PWD_ID:	error = sim_pwd();				break;
+				case CMD_CAT_ID:	error = sim_cat(arg1);			break; // TODO
+				case CMD_LS_ID:		error = sim_ls(arg1);			break; // TODO
+				case CMD_INFO_ID:	error = sim_info(arg1);			break;
+				case CMD_MV_ID:		error = sim_mv(arg1, arg2);		break; // TODO
+				case CMD_CP_ID:		error = sim_cp(arg1, arg2);		break; // TODO
+				case CMD_RM_ID:		error = sim_rm(arg1);			break; // TODO
+				case CMD_CD_ID:		error = sim_cd(arg1);			break;
+				case CMD_MKDIR_ID:	error = sim_mkdir(arg1);		break;
+				case CMD_RMDIR_ID:	error = sim_rmdir(arg1);		break;
+				case CMD_INCP_ID:	error = sim_incp(arg1, arg2);	break; // TODO
+				case CMD_OUTCP_ID:	error = sim_outcp(arg1, arg2);	break; // TODO
+				case CMD_LOAD_ID:	error = sim_load(arg1);			break; // TODO
+				case CMD_FSCK_ID:	error = sim_fsck();				break; // TODO
+				case CMD_DEBUG_ID:	error = sim_debug(arg1);		break;
 				default:
 					puts("-zos: command not found");
 			}

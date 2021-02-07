@@ -4,7 +4,7 @@
 #include "errors.h"
 
 
-int pwd_() {
+int sim_pwd() {
 	puts(buff_pwd);
 
 	return RETURN_SUCCESS;

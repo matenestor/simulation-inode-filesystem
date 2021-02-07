@@ -1,14 +1,14 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../fs_operations.h"
+#include "fs_api.h"
 #include "inode.h"
 
-#include "../../include/logger.h"
-#include "../../include/errors.h"
+#include "logger.h"
+#include "errors.h"
 
 
-int outcp_(const char* source, const char* target) {
+int sim_outcp(const char* source, const char* target) {
 	int ret = RETURN_FAILURE;
 	struct inode in_source = {0};
 	FILE* f_target = NULL;

@@ -40,12 +40,17 @@ int main(int argc, char const **argv) {
 	// register signal interrupt
 	signal(SIGINT, signal_handler);
 
-	puts(PR_INTRO);
-	if (init_simulation(argc, argv) == RETURN_SUCCESS) {
-		run();
+	if (argc > 1) {
+		if (init_simulation(argv[1]) == RETURN_SUCCESS) {
+			run();
+		} else {
+			puts(PR_HELP);
+			log_critical("Terminating: %s", my_strerror(my_errno));
+		}
 	} else {
-		puts(PR_HELP);
-		log_fatal("Terminating: %s", my_strerror(my_errno));
+		set_myerrno(Err_fs_name_missing);
+		my_perror("zos");
+		log_error("Terminating: %s", my_strerror(my_errno));
 	}
 
 	// destroy logger

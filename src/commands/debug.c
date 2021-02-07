@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "fs_api.h"
 #include "fs_cache.h"
 #include "inode.h"
-#include "../fs_operations.h"
 
+#define CACHE_SIZE	131072
 
 static void debug_superblock() {
 	puts("> SUPERBLOCK ---------------------------");
@@ -34,6 +35,8 @@ static void debug_superblock() {
 			sb.addr_data);
 }
 
+size_t fs_read_bool(bool* buffer, size_t count);
+
 static void debug_bitmaps() {
 	size_t i, j;
 	size_t total_fields = sb.block_count;
@@ -52,11 +55,8 @@ static void debug_bitmaps() {
 	for (i = 0; i <= loops; ++i) {
 		batch = i < loops ? CACHE_SIZE : over_fields;
 
-		fs_seek_set(i < loops ? sb.addr_bm_inodes + i * CACHE_SIZE : addr_over_bm_in);
-		fs_read_bool(bm_inodes, batch);
-
-		fs_seek_set(i < loops ? sb.addr_bm_data + i * CACHE_SIZE : addr_over_bm_dt);
-		fs_read_bool(bm_data, batch);
+		fs_read_bool(bm_inodes, i < loops ? sb.addr_bm_inodes + i * CACHE_SIZE : addr_over_bm_in);
+		fs_read_bool(bm_data,   i < loops ? sb.addr_bm_data   + i * CACHE_SIZE : addr_over_bm_dt);
 
 		for (j = 0; j < batch; ++j) {
 			if (bm_inodes[j])
@@ -68,8 +68,8 @@ static void debug_bitmaps() {
 
 	puts("> BITMAPS ------------------------------");
 	printf(" size of block: %d B\n"
-			" free inodes: %d/%d\n"
-			" free block: %d/%d\n",
+			" free inodes: %ld/%d\n"
+			" free block: %ld/%d\n",
 			sb.block_size,
 			free_inodes_fields, sb.block_count,
 			free_block_fields, sb.block_count);
@@ -90,31 +90,29 @@ static void debug_inodes() {
 	size_t batch;
 
 	// read batches of inodes
-	fs_seek_set(sb.addr_inodes);
-
 	for (i = 0; i <= loops; ++i) {
 		batch = i < loops ? cache_capacity : over_inodes;
 
-		fs_read_inode(inodes, batch);
+		fs_read_inode(inodes, batch, i * cache_capacity);
 
 		for (j = 0; j < batch; ++j) {
-			if (inodes[j].item_type == Itemtype_free)
+			if (inodes[j].inode_type == Inode_type_free)
 				++inodes_free;
-			else if (inodes[j].item_type == Itemtype_file)
+			else if (inodes[j].inode_type == Inode_type_file)
 				++inodes_file;
-			else if (inodes[j].item_type == Itemtype_directory)
+			else if (inodes[j].inode_type == Inode_type_dirc)
 				++inodes_dirc;
 		}
 	}
 
 	puts("> INODES -------------------------------");
-	printf(" size of inode: %d B\n"
+	printf(" size of inode: %ld B\n"
 			" count of direct links: %d\n"
 			" count of indirect links level 1: %d\n"
 			" count of indirect links level 2: %d\n"
-			" free inodes: %d/%d\n"
-			" file inodes: %d/%d\n"
-			" directory inodes: %d/%d\n",
+			" free inodes: %ld/%d\n"
+			" file inodes: %ld/%d\n"
+			" directory inodes: %ld/%d\n",
 			sizeof(struct inode),
 			COUNT_DIRECT_LINKS,
 			COUNT_INDIRECT_LINKS_1,
@@ -141,11 +139,9 @@ static void debug_blocks() {
 	memset(blocks, '\0', max_blocks * sb.block_size);
 
 	// read batches of data block
-	fs_seek_set(sb.addr_data);
-
 	for (i = 0; i <= loops; ++i) {
 		batch = i < loops ? max_blocks : over_blocks;
-		fs_read_char(blocks, batch * sb.block_size);
+		fs_read_data(blocks, batch * sb.block_size, i * max_blocks);
 
 		// check every block in cache
 		for (j = 0; j < batch; ++j) {
@@ -161,13 +157,13 @@ static void debug_blocks() {
 	}
 
 	puts("> BLOCKS -----------------------------");
-	printf(" free block: %d/%d\n"
-			" used block: %d/%d\n",
+	printf(" free block: %ld/%d\n"
+			" used block: %ld/%d\n",
 		   free_blocks, sb.block_count,
 		   sb.block_count - free_blocks, sb.block_count);
 }
 
-int debug_(const char* detail) {
+int sim_debug(const char* detail) {
 	debug_superblock();
 	debug_bitmaps();
 	debug_inodes();

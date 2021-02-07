@@ -4,7 +4,7 @@
 #include "errors.h"
 
 
-int fsck_() {
+int sim_fsck() {
 	int ret = RETURN_FAILURE;
 	return ret;
 }

@@ -2,7 +2,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include "../include/errors.h"
+#include "errors.h"
 
 
 enum error_ my_errno;
@@ -34,7 +34,6 @@ const char* my_strerror(const enum error_ err) {
 		case Err_signal_interrupt:		return "signal interrupt";
 		case Err_fs_name_missing:		return "filesystem name not provided";
 		case Err_fs_name_long:			return "filesystem name too long";
-		case Err_fs_name_invalid:		return "filesystem name invalid";
 		case Err_fs_not_loaded:			return "unable to load filesystem";
 		case Err_fs_size_sim_range:		return "filesystem size not in simulation range";
 		case Err_fs_size_sys_range:		return "filesystem size not in system range";
