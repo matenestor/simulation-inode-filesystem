@@ -24,6 +24,8 @@
 #define isnegnum(cha)			(cha[0] == '-')
 #define isinrange(n)			((n) > 0 && (n) <= FS_SIZE_MAX)
 
+extern FILE* filesystem;
+
 extern size_t fs_write_superblock(const struct superblock*);
 extern size_t format_write_bool(const bool*, size_t);
 extern size_t format_write_inode(const struct inode*, size_t);
@@ -57,7 +59,7 @@ static void get_datetime(char* datetime) {
 	strftime(datetime, LOG_DATETIME_LENGTH_, "%Y-%m-%d %H:%M:%S", tm_info);
 }
 
-static int is_valid_size(const char* num_str, uint32_t* size) {
+static int parse_filesystem_size(const char* num_str, uint32_t* size) {
 	long num = 0;
 
 	if (strlen(num_str) == 0) {
@@ -159,28 +161,29 @@ static int init_inodes(const size_t block_cnt) {
 	// count of inodes to be read
 	size_t batch = loops > 0 ? cache_capacity : over_inodes;
 	// inode template
-	struct inode in;
+	struct inode inode_init;
 	// array of cached inode in filesystem (inodes count == block count)
-	struct inode inodes[cache_capacity];
+	struct inode inodes[batch];
 
 	printf("init: inodes.. ");
 
 	// init empty inode
-	in.inode_type = Inode_type_free;
-	in.file_size = 0;
+	inode_init.id_inode = FREE_LINK;
+	inode_init.inode_type = Inode_type_free;
+	inode_init.file_size = 0;
 	for (i = 0; i < COUNT_DIRECT_LINKS; ++i) {
-		in.direct[i] = FREE_LINK;
+		inode_init.direct[i] = FREE_LINK;
 	}
 	for (i = 0; i < COUNT_INDIRECT_LINKS_1; ++i) {
-		in.indirect_1[i] = FREE_LINK;
+		inode_init.indirect_1[i] = FREE_LINK;
 	}
 	for (i = 0; i < COUNT_INDIRECT_LINKS_2; ++i) {
-		in.indirect_2[i] = FREE_LINK;
+		inode_init.indirect_2[i] = FREE_LINK;
 	}
 
 	// cache inodes to local array for future FS_WRITE
 	for (i = 0; i < batch; ++i) {
-		memcpy(&inodes[i], &in, sizeof(struct inode));
+		memcpy(&inodes[i], &inode_init, sizeof(struct inode));
 	}
 
 	// write everything
@@ -188,10 +191,10 @@ static int init_inodes(const size_t block_cnt) {
 		batch = i < loops ? cache_capacity : over_inodes;
 		// initialize new inode ids
 		// NOTE: inode ids start at 1!
-		for (j = 1; j <= batch; ++j) {
+		for (j = 0; j < batch; ++j) {
 			// really 'cache_capacity', not 'batch',
 			// because of last cycle, where 'batch' == 'over_inodes
-			inodes[j].id_inode = j + i*cache_capacity;
+			inodes[j].id_inode = (j+1) + i*cache_capacity;
 		}
 		format_write_inode(inodes, batch);
 	}
@@ -206,7 +209,7 @@ static int init_blocks(const uint32_t fs_size) {
 	size_t i, batch;
 	// how much bytes is missing till end of filesystem
 	// after meta part -- empty space part + data part
-	uint32_t remaining_part = mb2b(fs_size) - ftell(filesystem);
+	uint64_t remaining_part = mb2b(fs_size) - ftell(filesystem);
 	size_t loops = remaining_part / CACHE_SIZE;
 	// helper array to be filled from
 	char zeros[CACHE_SIZE] = {0};
@@ -228,27 +231,29 @@ static int init_blocks(const uint32_t fs_size) {
 }
 
 static int init_root() {
-	struct inode in = {0};
+	struct inode inode_root = {0};
 	// root inode has id=1 and is on filesystem index=1 (0 is nothing)
-	struct directory_item di[2] = {{1, "."}, {1, ".."}};
+	struct directory_item dir_root[sb.count_dir_items];
 
 	printf("init: root.. ");
 
 	// root inode
-	fs_read_inode(&in, 1, 0);
-	in.inode_type = Inode_type_dirc;
-	in.direct[0] = 1;
+	fs_read_inode(&inode_root, 1, 1);
+	inode_root.inode_type = Inode_type_dirc;
+	inode_root.file_size = FS_BLOCK_SIZE;
+	inode_root.direct[0] = 1;
+	// root directory
+	init_empty_dir_block(dir_root, 1, 1);
 
 	// turn off root bitmap fields
 	format_root_bm_off();
 	// write root inode
-	format_write_inode(&in, 1);
+	fs_write_inode(&inode_root, 1, 1);
 	// write root data block ('/' dir)
-	format_write_directory_item(di, 2);
-	fs_flush();
+	fs_write_directory_item(dir_root, 2, 1);
 
 	// cache root inode to simulation cache
-	memcpy(&in_actual, &in, sizeof(struct inode));
+	memcpy(&in_actual, &inode_root, sizeof(struct inode));
 	puts("done");
 
 	return RETURN_SUCCESS;
@@ -262,7 +267,7 @@ int sim_format(const char* fs_size_str, const char* path) {
 
 	log_info("Formatting filesystem [path: %s] [size: %s]", path, fs_size_str);
 
-	if (is_valid_size(fs_size_str, &fs_size) == RETURN_SUCCESS) {
+	if (parse_filesystem_size(fs_size_str, &fs_size) == RETURN_SUCCESS) {
 		// Count of blocks in data blocks part is equal to bitmaps sizes and count of inodes.
 		// 'fs_size' is in MB, 'block_size' is in B, data part is 100*'PERCENTAGE' % of whole filesystem
 		dt_percentage = mb2b(fs_size) * PERCENTAGE;

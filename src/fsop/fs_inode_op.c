@@ -3,7 +3,6 @@
 
 #include "fs_api.h"
 #include "fs_cache.h"
-#include "iteration_carry.h"
 
 #include "errors.h"
 #include "logger.h"
@@ -12,17 +11,10 @@
 // ---------- INODE FREE ------------------------------------------------------
 
 /*
- * 	Free given inode by deleting record from its parent's blocks,
- * 	resetting its values, freeing links and turning on its bitmap field.
+ * 	Free given inode by resetting its values,
+ * 	freeing links and turning on its bitmap field.
  */
-static int free_inode(struct inode* inode_delete, const uint32_t id_parent) {
-	struct carry_directory_item carry = {inode_delete->id_inode, ""};
-	struct inode inode_parent = {0};
-
-	// delete record from parent
-	fs_read_inode(&inode_parent, 1, id_parent);
-	iterate_links(&inode_parent, &carry, delete_block_item);
-
+static int free_inode(struct inode* inode_delete) {
 	// free given inode
 	inode_delete->inode_type = Inode_type_free;
 	inode_delete->file_size = 0;
@@ -36,17 +28,14 @@ static int free_inode(struct inode* inode_delete, const uint32_t id_parent) {
 /*
  * Free file inode. If 'id_inode' is id of directory or free inode, error is set.
  */
-int free_inode_file(const uint32_t id_inode, const uint32_t id_parent) {
+int free_inode_file(struct inode* inode2free) {
 	int ret = RETURN_FAILURE;
-	struct inode inode_delete = {0};
 
-	fs_read_inode(&inode_delete, 1, id_inode);
-
-	if (inode_delete.inode_type == Inode_type_file) {
-		free_inode(&inode_delete, id_parent);
+	if (inode2free->inode_type == Inode_type_file) {
+		free_inode(inode2free);
 		ret = RETURN_SUCCESS;
 	}
-	else if (inode_delete.inode_type == Inode_type_dirc) {
+	else if (inode2free->inode_type == Inode_type_dirc) {
 		set_myerrno(Err_item_not_file);
 	} else {
 		set_myerrno(Err_item_not_exists);
@@ -58,21 +47,18 @@ int free_inode_file(const uint32_t id_inode, const uint32_t id_parent) {
  * Free file inode. If directory is not empty
  * or 'id_inode' is id of file or free inode, error is set.
  */
-int free_inode_directory(const uint32_t id_inode, const uint32_t id_parent) {
+int free_inode_directory(struct inode* inode2free) {
 	int ret = RETURN_FAILURE;
-	struct inode inode_delete = {0};
 
-	fs_read_inode(&inode_delete, 1, id_inode);
-
-	if (inode_delete.inode_type == Inode_type_dirc) {
-		if (is_directory_empty(&inode_delete)) {
-			free_inode(&inode_delete, id_parent);
+	if (inode2free->inode_type == Inode_type_dirc) {
+		if (is_directory_empty(inode2free)) {
+			free_inode(inode2free);
 			ret = RETURN_SUCCESS;
 		} else {
 			set_myerrno(Err_dir_not_empty);
 		}
 	}
-	else if (inode_delete.inode_type == Inode_type_file) {
+	else if (inode2free->inode_type == Inode_type_file) {
 		set_myerrno(Err_item_not_directory);
 	} else {
 		set_myerrno(Err_item_not_exists);
@@ -126,14 +112,10 @@ uint32_t create_inode_directory(struct inode* new_inode, const uint32_t id_paren
 		fs_read_inode(new_inode, 1, id_free_inode);
 
 		// init first block of new directory
-		init_block_with_directories(new_dirs);
-		new_dirs[0].fk_id_inode = id_free_inode;
-		new_dirs[1].fk_id_inode = id_parent;
-		strncpy(new_dirs[0].item_name, ".", 1);
-		strncpy(new_dirs[1].item_name, "..", 2);
-
+		init_empty_dir_block(new_dirs, id_free_inode, id_parent);
 		// init new inode
 		new_inode->inode_type = Inode_type_dirc;
+		new_inode->file_size = sb.block_size;
 		new_inode->direct[0] = id_free_block;
 
 		// write new updated inode and data block

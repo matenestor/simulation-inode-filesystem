@@ -7,6 +7,10 @@
 #include "logger.h"
 #include "errors.h"
 
+
+// filesystem file, which is being worked with
+FILE* filesystem;
+
 extern size_t fs_read_superblock(struct superblock*);
 
 

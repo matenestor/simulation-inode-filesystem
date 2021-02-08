@@ -8,10 +8,13 @@
 #include "fs_cache.h"
 
 
+extern FILE* filesystem;
+
+
 // --- SEEK
 
 static void fs_seek_set(const int64_t offset) {
-	assert(offset >= 0); // TODO delete
+	assert(0 <= offset < (sb.disk_size*1024*1024)); // TODO delete
 	fseek(filesystem, offset, SEEK_SET);
 }
 
@@ -124,6 +127,7 @@ void fs_flush() {
 }
 
 // --- SPECIFIC FUNCTIONS FOR format.c
+// no fseek in functions, because they are used in sequential data formatting
 
 size_t format_write_bool(const bool* buffer, const size_t count) {
 	return fwrite(buffer, sizeof(bool), count, filesystem);

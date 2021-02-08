@@ -42,7 +42,7 @@ const char* my_strerror(const enum error_ err) {
 		case Err_arg_missing:			return "missing operand";
 		case Err_dir_not_empty:			return "directory not empty";
 		case Err_dir_arg_invalid:		return "invalid argument";
-		case Err_dir_exists:			return "file exists";
+		case Err_item_exists:			return "file exists";
 		case Err_item_not_file:			return "is a directory";
 		case Err_item_not_directory:	return "not a directory";
 		case Err_item_not_exists:		return "no such file or directory";

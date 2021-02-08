@@ -42,9 +42,6 @@ char fs_name[STRLEN_FS_NAME];			// fs name given by user
 char buff_pwd[STRLEN_PWD_LENGTH];		// fs current working directory
 char buff_prompt[BUFFER_PROMPT_LENGTH];	// prompt in console
 
-// filesystem file, which is being worked with
-FILE* filesystem;
-
 // super block of actual using filesystem
 struct superblock sb = {0};
 // inode, where user currently is

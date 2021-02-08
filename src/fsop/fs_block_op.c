@@ -18,24 +18,47 @@ enum search_for {
 	search_name,
 };
 
-//int init_block_with_directories_fs(const uint32_t id_block) {
-//	size_t i;
-//	struct directory_item block[sb.count_dir_items];
-//
-//	for (i = 0; i < sb.count_dir_items; i++) {
-//	    block->fk_id_inode = FREE_LINK;
-//		strncpy(block->item_name, "", STRLEN_ITEM_NAME);
-//	}
-//
-//	fs_write_directory_item(block, sb.count_dir_items, id_block);
-//	return RETURN_SUCCESS;
-//}
+static float human_readable(char* unit, const uint32_t file_size_) {
+	static short loop;
+	static float file_size;
+	static char units[][3] = {"B", "KB", "MB", "GB"};
 
-int init_block_with_directories(struct directory_item* block) {
+	loop = 0;
+	file_size = file_size_;
+
+	while (file_size > 1023.9f) {
+		file_size /= 1024.0f;
+		++loop;
+	}
+	strncpy(unit, units[loop], 3);
+	return file_size;
+}
+
+int init_block_with_directories(const uint32_t id_block) {
+	size_t i;
+	struct directory_item block[sb.count_dir_items];
+
+	for (i = 0; i < sb.count_dir_items; i++) {
+	    block->fk_id_inode = FREE_LINK;
+		strncpy(block->item_name, "", STRLEN_ITEM_NAME);
+	}
+
+	fs_write_directory_item(block, sb.count_dir_items, id_block);
+	return RETURN_SUCCESS;
+}
+
+int init_empty_dir_block(struct directory_item* block,
+						 const uint32_t id_self, const uint32_t id_parent) {
+
 	for (size_t i = 0; i < sb.count_dir_items; i++) {
 		block[i].fk_id_inode = FREE_LINK;
 		strncpy(block[i].item_name, "", STRLEN_ITEM_NAME);
 	}
+	block[0].fk_id_inode = id_self;
+	block[1].fk_id_inode = id_parent;
+	strncpy(block[0].item_name, ".", 1);
+	strncpy(block[1].item_name, "..", 2);
+
 	return RETURN_SUCCESS;
 }
 
@@ -56,25 +79,27 @@ static bool search_block(const enum search_for search, const uint32_t* links,
 
 		// search directory items for wanted element
 		for (j = 0; j < sb.count_dir_items && !ret; ++j) {
-			// searching for ID
-			if (search == search_id) {
-				if (block[j].fk_id_inode == carry->id) {
-					strncpy(carry->name, block[j].item_name, STRLEN_ITEM_NAME);
-					log_info("Got item name [%s] by id [%d].", carry->name, carry->id);
+			switch (search) {
+				case search_id:
+					if (strcmp(carry->name, block[j].item_name) == 0) {
+						carry->id = block[j].fk_id_inode;
+						log_info("Got item id [%d] by name [%s].", carry->id, carry->name);
+						ret = true;
+					}
+					break;
+				case search_name:
+					if (block[j].fk_id_inode == carry->id) {
+						strncpy(carry->name, block[j].item_name, STRLEN_ITEM_NAME);
+						log_info("Got item name [%s] by id [%d].", carry->name, carry->id);
+						ret = true;
+					}
+					break;
+				default:
+					set_myerrno(Err_fs_error);
 					ret = true;
-				}
-			}
-			// searching for NAME
-			else {
-				if (strcmp(carry->name, block[j].item_name) == 0) {
-					carry->id = block[j].fk_id_inode;
-					log_info("Got item id [%d] by name [%s].", carry->id, carry->name);
-					ret = true;
-				}
 			}
 		}
 	}
-
 	return ret;
 }
 
@@ -120,6 +145,33 @@ ITERABLE(delete_block_item) {
 }
 
 /*
+ * Add directory item to block.
+ */
+ITERABLE(add_block_item) {
+	size_t i, j;
+	struct directory_item block[sb.count_dir_items];
+	struct carry_directory_item* carry = (struct carry_directory_item*) p_carry;
+
+	for (i = 0; i < links_count; ++i) {
+		if (links[i] == FREE_LINK)
+			continue;
+
+		fs_read_directory_item(block, sb.count_dir_items, links[i]);
+
+		for (j = 0; j < sb.count_dir_items; ++j) {
+			// empty place for new item record found
+			if (block[j].fk_id_inode == FREE_LINK) {
+				block[j].fk_id_inode = carry->id;
+				strncpy(block[j].item_name, carry->name, strlen(carry->name) + 1);
+				fs_write_directory_item(block, sb.count_dir_items, links[i]);
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+/*
  * Check if there are other directories than "." and ".." in given blocks.
  */
 ITERABLE(has_common_directories) {
@@ -148,6 +200,8 @@ ITERABLE(has_common_directories) {
  */
 ITERABLE(list_items) {
 	size_t i, j;
+	char unit[3] = {0};
+	float file_size = 0;
 	struct inode inode_ls = {0};
 	struct directory_item block[sb.count_dir_items];
 
@@ -158,22 +212,19 @@ ITERABLE(list_items) {
 		fs_read_directory_item(block, sb.count_dir_items, links[i]);
 
 		for (j = 0; j < sb.count_dir_items; ++j) {
-//			printf(" %s\n", block[j].item_name);
+			if (block[j].fk_id_inode == FREE_LINK)
+				continue;
 
-			// just a fancy thing -- print if item is file or directory
+			// read inodes in directory, so it is possible to print
+			// their size and if item is file or directory
 			fs_read_inode(&inode_ls, 1, block[j].fk_id_inode);
+			file_size = human_readable(unit, inode_ls.file_size);
 
 			if (inode_ls.inode_type == Inode_type_file) {
-				printf("- %s\n", block[j].item_name);
+				printf("- %4.1f%s\t%s\n", file_size, unit, block[j].item_name);
 			}
 			else if (inode_ls.inode_type == Inode_type_dirc) {
-				printf("d %s%s\n", block[j].item_name, SEPARATOR);
-			}
-			// never should get here (but i got here during development, so from now,
-			// i am covering all possible cases, even when they seem impossible)
-			else {
-				fprintf(stderr, "! %s [%d] leftover.\n",
-						block[j].item_name, block[j].fk_id_inode);
+				printf("d %4.1f%s\t%s%s\n", file_size, unit, block[j].item_name, SEPARATOR);
 			}
 		}
 	}

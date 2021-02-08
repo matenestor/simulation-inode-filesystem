@@ -365,6 +365,11 @@ int create_empty_links(uint32_t* buffer, const size_t to_create, struct inode* i
 
 	// successfully initialized 'to_create' of new links
 	if (created == to_create) {
+		// total usage of space of directory inode is increased here
+		// and calculated are only leafs of links -- no deep blocks with indirect links
+		if (inode_source->inode_type == Inode_type_dirc) {
+			inode_source->file_size += (to_create * sb.block_size);
+		}
 		memcpy(inode_source, &inode_tmp, sizeof(struct inode));
 		fs_write_inode(&inode_tmp, 1, inode_tmp.id_inode);
 		return RETURN_SUCCESS;
@@ -376,11 +381,11 @@ int create_empty_links(uint32_t* buffer, const size_t to_create, struct inode* i
 
 	// error during allocating links, so destroy all created links so far
 	// from temporary inode == source inode is untouched, but there were write to filesystem
-	free_indirect_2:
+free_indirect_2:
 	reset_created_links(inode_tmp.indirect_2, inode_source->indirect_2, COUNT_INDIRECT_LINKS_2);
-	free_indirect_1:
+free_indirect_1:
 	reset_created_links(inode_tmp.indirect_1, inode_source->indirect_1, COUNT_INDIRECT_LINKS_1);
-	free_direct:
+free_direct:
 	reset_created_links(inode_tmp.direct, inode_source->direct, COUNT_DIRECT_LINKS);
 	// clear also given 'buffer' array
 	for (size_t i = 0; i < created; i++) {

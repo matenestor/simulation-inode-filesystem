@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 
 #include "fs_api.h"
 #include "fs_cache.h"
@@ -14,8 +15,7 @@
  * Get id of parent of given inode, which must be directory.
  */
 static int32_t get_parent_inode_id(struct inode* inode_child) {
-	if (inode_child->inode_type != Inode_type_dirc)
-		return FREE_LINK;
+	assert(inode_child->inode_type == Inode_type_dirc);
 
 	struct directory_item dot_dirs[2] = {0};
 	fs_read_directory_item(dot_dirs, 2, inode_child->direct[0]);
@@ -30,7 +30,7 @@ static int32_t get_parent_inode_id(struct inode* inode_child) {
  *  then function searches from root inode, else from actual inode, where user is.
  *  Inodes, to the final one, are read and traversed folder by folder in path.
  */
-static int get_inode_ids(const char* path, uint32_t* p_id_destination, uint32_t* p_id_parent) {
+static int get_inode_ids(uint32_t* p_id_destination, uint32_t* p_id_parent, const char* path) {
 	int ret_iter = RETURN_FAILURE;
 	uint32_t id_dest = 0;
 	uint32_t id_parent = 0;
@@ -85,10 +85,10 @@ static int get_inode_ids(const char* path, uint32_t* p_id_destination, uint32_t*
 /*
  *  Get inode and its parent from given path.
  */
-int get_inode_wparent(const char* path, struct inode* inode_dest, struct inode* inode_parent) {
+int get_inode_wparent(struct inode* inode_dest, struct inode* inode_parent, const char* path) {
 	uint32_t id_destination = FREE_LINK;
 	uint32_t id_parent = FREE_LINK;
-	if (get_inode_ids(path, &id_destination, &id_parent) != RETURN_FAILURE) {
+	if (get_inode_ids(&id_destination, &id_parent, path) != RETURN_FAILURE) {
 		fs_read_inode(inode_dest, 1, id_destination);
 		fs_read_inode(inode_parent, 1, id_parent);
 		return RETURN_SUCCESS;
@@ -100,10 +100,10 @@ int get_inode_wparent(const char* path, struct inode* inode_dest, struct inode* 
 /*
  *  Get inode from given path.
  */
-int get_inode(const char* path, struct inode* inode_dest) {
+int get_inode(struct inode* inode_dest, const char* path) {
 	uint32_t id_destination = FREE_LINK;
 	uint32_t id_parent = FREE_LINK;
-	if (get_inode_ids(path, &id_destination, &id_parent) != RETURN_FAILURE) {
+	if (get_inode_ids(&id_destination, &id_parent, path) != RETURN_FAILURE) {
 		fs_read_inode(inode_dest, 1, id_destination);
 		return RETURN_SUCCESS;
 	}

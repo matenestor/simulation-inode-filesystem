@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 
-extern FILE* filesystem;
 extern struct superblock sb;
 extern struct inode in_actual;
 

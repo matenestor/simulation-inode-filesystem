@@ -21,7 +21,7 @@ enum error_ {
     Err_arg_missing			= 1010,
     Err_dir_not_empty		= 1011,
     Err_dir_arg_invalid		= 1012,
-    Err_dir_exists			= 1013,
+    Err_item_exists			= 1013,
     Err_item_not_file		= 1014,
     Err_item_not_directory	= 1015,
     Err_item_not_exists		= 1016,

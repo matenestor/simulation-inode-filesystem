@@ -19,6 +19,7 @@ struct carry_directory_item {
 
 ITERABLE(search_block_inode_id);
 ITERABLE(search_block_inode_name);
+ITERABLE(add_block_item);
 ITERABLE(delete_block_item);
 ITERABLE(has_common_directories);
 ITERABLE(list_items);

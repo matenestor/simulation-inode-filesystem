@@ -158,7 +158,7 @@ void run() {
 			switch (cmd_id) {
 				case CMD_PWD_ID:	error = sim_pwd();				break;
 				case CMD_CAT_ID:	error = sim_cat(arg1);			break; // TODO
-				case CMD_LS_ID:		error = sim_ls(arg1);			break; // TODO
+				case CMD_LS_ID:		error = sim_ls(arg1);			break; // TODO test
 				case CMD_INFO_ID:	error = sim_info(arg1);			break;
 				case CMD_MV_ID:		error = sim_mv(arg1, arg2);		break; // TODO
 				case CMD_CP_ID:		error = sim_cp(arg1, arg2);		break; // TODO

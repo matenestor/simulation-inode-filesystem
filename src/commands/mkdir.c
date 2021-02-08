@@ -1,109 +1,116 @@
 #include <stdint.h>
 #include <string.h>
+#include <libgen.h>
 
 #include "fs_api.h"
-#include "fs_cache.h"
 #include "inode.h"
+#include "iteration_carry.h"
 
 #include "logger.h"
 #include "errors.h"
 
 
 /*
- * 	Check if making new directory is possible by reading parent of the directory
- * 	and then trying to read inode with name of the directory.
+ * Split given path to path to last element and item name there.
+ *  "/usr/local/bin/inodes" --> "/usr/local/bin" + "inodes"
  */
-static bool is_mkdir_possible(const char* path, const char* path_parent) {
-	bool is_creatable = false;
-	struct inode in_tmp = {0};
+static int split_path(const char* path, char* const dir_path, char* const dir_name) {
+	size_t path_length = strlen(path) + 1;
+	char copy_dirname[path_length];
+	char copy_basename[path_length];
+	char* p_copy_dirname = NULL;
+	char* p_copy_basename = NULL;
 
-	// path to destination inode exists
-	if (get_inode_by_path(&in_tmp, path_parent) != RETURN_FAILURE) {
-		// no directory with same name as new being created exists
-		if (get_inode_by_path(&in_tmp, path) == RETURN_FAILURE) {
-			is_creatable = true;
-		}
-		else {
-			set_myerrno(Err_dir_exists);
-		}
+	// copies for dirname() and basename()
+	strncpy(copy_dirname, path, path_length);
+	strncpy(copy_basename, path, path_length);
+	// get pointer to elements
+	p_copy_dirname = dirname(copy_dirname);
+	p_copy_basename = basename(copy_basename);
+
+	if (strlen(p_copy_basename) < STRLEN_ITEM_NAME) {
+		// copy dir path and name
+		strncpy(dir_path, p_copy_dirname, strlen(p_copy_dirname) + 1);
+		strncpy(dir_name, p_copy_basename, strlen(p_copy_basename) + 1);
+		return RETURN_SUCCESS;
+	} // new directory name is too long
+	else {
+		set_myerrno(Err_item_name_long);
+		return RETURN_FAILURE;
 	}
-
-	return is_creatable;
 }
 
 /*
- * 	Makes new directory. Check if path was given, parse name from path,
- * 	check if directory creation is possible, get inode where the directory will be created,
- * 	get free link in the inode, create new inode for the directory.
- * 	If everything above is successful, initialize new directory and make record of it
- * 	in parent inode and data block.
- *
+ * 	Check if making new directory is possible.
+ */
+static bool item_exists(const struct inode* inode_parent, const char* dir_name) {
+	bool exists = false;
+	struct carry_directory_item carry = {0};
+
+	carry.id = FREE_LINK;
+	strncpy(carry.name, dir_name, STRLEN_ITEM_NAME);
+
+	// check if item already exists
+	if (iterate_links(inode_parent, &carry, search_block_inode_id) != RETURN_FAILURE) {
+		exists = true;
+	}
+	return exists;
+}
+
+/*
+ * Make new directory in filesystem.
  */
 int sim_mkdir(const char* path) {
-	int ret = RETURN_FAILURE;
-
 	log_info("mkdir: creating [%s]", path);
 
-	// count of records in block read
-	size_t items = 0;
-	// name of new directory
-	char dir_name[STRLEN_ITEM_NAME] = {0};
-	// path to parent of new directory, if any
-	char path_parent[strlen(path) + 1];
-	// id of block, where record of new directory will be stored
-	int32_t id_block = RETURN_FAILURE;
-	// parent of directory being created
-	struct inode in_parent = {0};
-	// inode of new directory
-	struct inode in_new_dir = {0};
-	// struct of new directory, which will be put to block
-	struct directory_item new_dir = {0};
-	// block of directory records, where the new record will be stored
-	struct directory_item dirs[sb.count_dir_items];
+	char dir_path[strlen(path) + 1];		// path to parent of new directory
+	char dir_name[STRLEN_ITEM_NAME] = {0};	// name of new directory
+	uint32_t empty_block[1] = {0};			// link number to empty block,
+											// in case all blocks of parent are full
+	struct inode inode_parent = {0};		// parent of directory being created
+	struct inode inode_new_dir = {0};		// inode of new directory
+	struct carry_directory_item carry = {0};
 
-	// separate path to parent directory from new directory name
-	my_dirname(path_parent, path);
+	if (strlen(path) == 0) {
+		set_myerrno(Err_arg_missing);
+		goto fail;
+	}
+	if (split_path(path, dir_path, dir_name) == RETURN_FAILURE) {
+		goto fail;
+	}
+	// get parent inode, where new directory should be created in
+	if (get_inode(&inode_parent, dir_path) == RETURN_FAILURE) {
+		goto fail;
+	}
+	// check if item already exists in parent
+	if (item_exists(&inode_parent, dir_name)) {
+		set_myerrno(Err_item_exists);
+		goto fail;
+	}
+	// create inode for new directory record
+	if (create_inode_directory(&inode_new_dir, inode_parent.id_inode) == RETURN_FAILURE) {
+		goto fail;
+	}
 
-	if (strlen(path) > 0) {
-		// get name -- last element in path
-		if (my_basename(dir_name, path, STRLEN_ITEM_NAME) != RETURN_FAILURE) {
-			// check if it is possible to make new directory
-			if (is_mkdir_possible(path, path_parent)) {
-				// get parent inode, where new directory should be created in
-				if (get_inode_by_path(&in_parent, path_parent) != RETURN_FAILURE) {
-					// get link to block in parent, where new directory will be written to
-					if ((id_block = get_empty_link(&in_parent, 1)) != RETURN_FAILURE) {
-						// create inode for new directory record
-						if (create_inode_directory(&in_new_dir, in_parent.id_inode) != RETURN_FAILURE) {
-							// cache block where the record of new directory will be stored
-							fs_read_directory_item(dirs, sb.count_dir_items, id_block);
-//							items = get_count_dirs(dirs);
+	carry.id = inode_new_dir.id_inode;
+	strncpy(carry.name, dir_name, strlen(dir_name));
 
-							// init new directory
-							strncpy(new_dir.item_name, dir_name, strlen(dir_name) + 1);
-							new_dir.fk_id_inode = in_new_dir.id_inode;
-
-							// insert new dir to the block
-							dirs[items] = new_dir;
-
-							// write updated block
-							fs_write_directory_item(dirs, items + 1, id_block);
-
-							fs_flush();
-
-							ret = RETURN_SUCCESS;
-						}
-						// TODO longterm:
-						//  else delete the link for 'id_block' if it is empty
-					}
-				}
-			}
+	// add record to parent inode about new directory
+	if (iterate_links(&inode_parent, &carry, add_block_item) == RETURN_FAILURE) {
+		// parent inode has all, so far created, blocks full
+		if (create_empty_links(empty_block, 1, &inode_parent) != RETURN_FAILURE) {
+			init_block_with_directories(empty_block[0]);
+			add_block_item(empty_block, 1, &carry);
+		} // error while creating new link, or parent inode is completely full of directories
+		else {
+			free_inode_directory(&inode_new_dir);
+			goto fail;
 		}
 	}
-	else {
-		set_myerrno(Err_arg_missing);
-		log_warning("mkdir: unable to make directory [%s]", path);
-	}
 
-	return ret;
+	return RETURN_SUCCESS;
+
+fail:
+	log_warning("mkdir: unable to make directory [%s]", path);
+	return RETURN_FAILURE;
 }

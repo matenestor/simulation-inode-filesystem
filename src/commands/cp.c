@@ -4,6 +4,9 @@
 #include "errors.h"
 
 
+/*
+ * Copy file in filesystem.
+ */
 int sim_cp(const char* arg1, const char* arg2) {
 	int ret = RETURN_FAILURE;
 	return ret;

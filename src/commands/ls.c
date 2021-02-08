@@ -23,7 +23,7 @@ int sim_ls(const char* path) {
 	}
 	// else get last inode in path
 	else {
-		get_inode(path, &inode_ls);
+		get_inode(&inode_ls, path);
 	}
 
 	switch (inode_ls.inode_type) {

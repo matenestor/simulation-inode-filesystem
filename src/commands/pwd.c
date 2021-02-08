@@ -4,6 +4,9 @@
 #include "errors.h"
 
 
+/*
+ * Print current working directory.
+ */
 int sim_pwd() {
 	puts(buff_pwd);
 
