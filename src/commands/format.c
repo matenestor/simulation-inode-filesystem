@@ -238,19 +238,19 @@ static int init_root() {
 	printf("init: root.. ");
 
 	// root inode
-	fs_read_inode(&inode_root, 1, 1);
+	fs_read_inode(&inode_root, 1, ROOT_ID);
 	inode_root.inode_type = Inode_type_dirc;
 	inode_root.file_size = FS_BLOCK_SIZE;
-	inode_root.direct[0] = 1;
+	inode_root.direct[0] = ROOT_ID;
 	// root directory
-	init_empty_dir_block(dir_root, 1, 1);
+	init_empty_dir_block(dir_root, ROOT_ID, ROOT_ID);
 
 	// turn off root bitmap fields
 	format_root_bm_off();
 	// write root inode
-	fs_write_inode(&inode_root, 1, 1);
+	fs_write_inode(&inode_root, 1, ROOT_ID);
 	// write root data block ('/' dir)
-	fs_write_directory_item(dir_root, 2, 1);
+	fs_write_directory_item(dir_root, 2, ROOT_ID);
 
 	// cache root inode to simulation cache
 	memcpy(&in_actual, &inode_root, sizeof(struct inode));

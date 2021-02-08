@@ -62,6 +62,6 @@ extern int sim_outcp(const char*, const char*);
 extern int sim_load(const char*);
 extern int sim_fsck();
 extern int sim_format(const char*, const char*);
-extern int sim_debug(const char*);
+extern int sim_debug(const char*, const char*);
 
 #endif

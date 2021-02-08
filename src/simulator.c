@@ -158,19 +158,19 @@ void run() {
 			switch (cmd_id) {
 				case CMD_PWD_ID:	error = sim_pwd();				break;
 				case CMD_CAT_ID:	error = sim_cat(arg1);			break; // TODO
-				case CMD_LS_ID:		error = sim_ls(arg1);			break; // TODO test
+				case CMD_LS_ID:		error = sim_ls(arg1);			break;
 				case CMD_INFO_ID:	error = sim_info(arg1);			break;
 				case CMD_MV_ID:		error = sim_mv(arg1, arg2);		break; // TODO
 				case CMD_CP_ID:		error = sim_cp(arg1, arg2);		break; // TODO
 				case CMD_RM_ID:		error = sim_rm(arg1);			break; // TODO
-				case CMD_CD_ID:		error = sim_cd(arg1);			break;
+				case CMD_CD_ID:		error = sim_cd(arg1);			break; // TODO
 				case CMD_MKDIR_ID:	error = sim_mkdir(arg1);		break;
 				case CMD_RMDIR_ID:	error = sim_rmdir(arg1);		break;
 				case CMD_INCP_ID:	error = sim_incp(arg1, arg2);	break; // TODO
 				case CMD_OUTCP_ID:	error = sim_outcp(arg1, arg2);	break; // TODO
 				case CMD_LOAD_ID:	error = sim_load(arg1);			break; // TODO
 				case CMD_FSCK_ID:	error = sim_fsck();				break; // TODO
-				case CMD_DEBUG_ID:	error = sim_debug(arg1);		break;
+				case CMD_DEBUG_ID:	error = sim_debug(arg1, arg2);	break;
 				default:
 					puts("-zos: command not found");
 			}

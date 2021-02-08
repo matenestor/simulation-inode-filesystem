@@ -1,61 +1,14 @@
 #include <stdint.h>
 #include <string.h>
-#include <libgen.h>
 
 #include "fs_api.h"
 #include "inode.h"
 #include "iteration_carry.h"
+#include "cmd_utils.h"
 
 #include "logger.h"
 #include "errors.h"
 
-
-/*
- * Split given path to path to last element and item name there.
- *  "/usr/local/bin/inodes" --> "/usr/local/bin" + "inodes"
- */
-static int split_path(const char* path, char* const dir_path, char* const dir_name) {
-	size_t path_length = strlen(path) + 1;
-	char copy_dirname[path_length];
-	char copy_basename[path_length];
-	char* p_copy_dirname = NULL;
-	char* p_copy_basename = NULL;
-
-	// copies for dirname() and basename()
-	strncpy(copy_dirname, path, path_length);
-	strncpy(copy_basename, path, path_length);
-	// get pointer to elements
-	p_copy_dirname = dirname(copy_dirname);
-	p_copy_basename = basename(copy_basename);
-
-	if (strlen(p_copy_basename) < STRLEN_ITEM_NAME) {
-		// copy dir path and name
-		strncpy(dir_path, p_copy_dirname, strlen(p_copy_dirname) + 1);
-		strncpy(dir_name, p_copy_basename, strlen(p_copy_basename) + 1);
-		return RETURN_SUCCESS;
-	} // new directory name is too long
-	else {
-		set_myerrno(Err_item_name_long);
-		return RETURN_FAILURE;
-	}
-}
-
-/*
- * 	Check if making new directory is possible.
- */
-static bool item_exists(const struct inode* inode_parent, const char* dir_name) {
-	bool exists = false;
-	struct carry_directory_item carry = {0};
-
-	carry.id = FREE_LINK;
-	strncpy(carry.name, dir_name, STRLEN_ITEM_NAME);
-
-	// check if item already exists
-	if (iterate_links(inode_parent, &carry, search_block_inode_id) != RETURN_FAILURE) {
-		exists = true;
-	}
-	return exists;
-}
 
 /*
  * Make new directory in filesystem.
@@ -63,13 +16,13 @@ static bool item_exists(const struct inode* inode_parent, const char* dir_name) 
 int sim_mkdir(const char* path) {
 	log_info("mkdir: creating [%s]", path);
 
-	char dir_path[strlen(path) + 1];		// path to parent of new directory
-	char dir_name[STRLEN_ITEM_NAME] = {0};	// name of new directory
-	uint32_t empty_block[1] = {0};			// link number to empty block,
-											// in case all blocks of parent are full
-	struct inode inode_parent = {0};		// parent of directory being created
-	struct inode inode_new_dir = {0};		// inode of new directory
+	char dir_path[strlen(path) + 1];
+	char dir_name[STRLEN_ITEM_NAME] = {0};
+	struct inode inode_parent = {0};
+	struct inode inode_new_dir = {0};
 	struct carry_directory_item carry = {0};
+	// link number to empty block, in case all blocks of parent are full
+	uint32_t empty_block[1] = {0};
 
 	if (strlen(path) == 0) {
 		set_myerrno(Err_arg_missing);

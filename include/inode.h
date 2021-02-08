@@ -5,7 +5,9 @@
 
 // 7 chars (name) + dot + 3 chars (extension) + \0 =
 // = 12 chars in total for item name
-#define STRLEN_ITEM_NAME 12
+#define STRLEN_ITEM_NAME 		12
+
+#define ROOT_ID					1
 
 #define FREE_LINK 				0
 #define COUNT_DIRECT_LINKS		5

@@ -186,8 +186,9 @@ ITERABLE(has_common_directories) {
 
 		for (j = 0; j < sb.count_dir_items; ++j) {
 			// other directory than "." and ".." found == directory is not empty
-			if (strcmp(block[j].item_name, ".") != 0
-				&& strcmp(block[j].item_name, "..") != 0) {
+			if (strcmp(block[j].item_name, "") != 0
+					&& strcmp(block[j].item_name, ".") != 0
+					&& strcmp(block[j].item_name, "..") != 0) {
 				return true;
 			}
 		}

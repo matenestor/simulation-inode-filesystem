@@ -43,7 +43,7 @@ static int get_inode_ids(uint32_t* p_id_destination, uint32_t* p_id_parent, cons
 
 	if (path_copy[0] == SEPARATOR[0]) {
 		// track path from root
-		fs_read_inode(&inode_dest, 1, 1);
+		fs_read_inode(&inode_dest, 1, ROOT_ID);
 	} else {
 		// track path from actual directory
 		fs_read_inode(&inode_dest, 1, in_actual.id_inode);
@@ -67,8 +67,8 @@ static int get_inode_ids(uint32_t* p_id_destination, uint32_t* p_id_parent, cons
 			fs_read_inode(&inode_dest, 1, id_dest);
 		} else {
 			// no item with parsed name found
-			id_parent = 0;
-			id_dest = 0;
+			id_parent = FREE_LINK;
+			id_dest = FREE_LINK;
 			set_myerrno(Err_item_not_exists);
 			log_error("Item does not exist [%s]\n", path);
 			break;
@@ -154,7 +154,7 @@ int get_path_to_root(char* dest_path, const size_t length_path, const struct ino
 	memset(buffer, '\0', length_path);
 
 	// while not in root inode
-	while (inode_tmp.id_inode != 1) {
+	while (inode_tmp.id_inode != ROOT_ID) {
 		// prepare child id for search of its name
 		carry.id = inode_tmp.id_inode;
 		// get parent inode
@@ -193,5 +193,5 @@ fail:
 bool is_directory_empty(const struct inode* inode_source) {
 	// if directory doesn't have common directories,
 	// meaning other than "." and "..", then it is empty
-	return !iterate_links(inode_source, NULL, has_common_directories);
+	return (bool) (iterate_links(inode_source, NULL, has_common_directories) == RETURN_FAILURE);
 }

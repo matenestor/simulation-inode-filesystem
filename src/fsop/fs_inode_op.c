@@ -14,13 +14,13 @@
  * 	Free given inode by resetting its values,
  * 	freeing links and turning on its bitmap field.
  */
-static int free_inode(struct inode* inode_delete) {
+static int free_inode(struct inode* inode2free) {
 	// free given inode
-	inode_delete->inode_type = Inode_type_free;
-	inode_delete->file_size = 0;
-	free_all_links(inode_delete);
-	free_bitmap_field_inode(inode_delete->id_inode);
-	fs_write_inode(inode_delete, 1, inode_delete->id_inode);
+	inode2free->inode_type = Inode_type_free;
+	inode2free->file_size = 0;
+	free_all_links(inode2free);
+	free_bitmap_field_inode(inode2free->id_inode);
+	fs_write_inode(inode2free, 1, inode2free->id_inode);
 
 	return RETURN_SUCCESS;
 }

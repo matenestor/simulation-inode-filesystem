@@ -18,7 +18,7 @@
 #define CMD_FORMAT	"format"
 #define CMD_HELP	"help"
 #define CMD_EXIT	"exit"
-#define CMD_DEBUG	"debug"
+#define CMD_DEBUG	"d"
 
 #define CMD_UNKNOWN_ID	0
 #define CMD_PWD_ID		1

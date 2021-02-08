@@ -3,6 +3,7 @@
 
 #include "fs_api.h"
 #include "fs_cache.h"
+#include "inode.h"		// ROOT_ID
 
 #include "logger.h"
 #include "errors.h"
@@ -22,8 +23,8 @@ int init_filesystem(const char* fsp, bool* is_formatted) {
 	if (access(fsp, F_OK) == 0) {
 		// filesystem is ready to be loaded
 		if ((filesystem = fopen(fsp, "rb+")) != NULL) {
-			fs_read_superblock(&sb);			// cache super block
-			fs_read_inode(&in_actual, 1, 1);	// cache root inode
+			fs_read_superblock(&sb);				// cache super block
+			fs_read_inode(&in_actual, 1, ROOT_ID);	// cache root inode
 
 			*is_formatted = true;
 			puts("Filesystem loaded successfully.");

@@ -11,6 +11,7 @@ add_executable(KIV_ZOS_sp
 
         src/main.c
         src/simulator.c
+        src/cmd_utils.c
 
         src/commands/pwd.c
         src/commands/cat.c
