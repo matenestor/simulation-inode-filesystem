@@ -19,7 +19,9 @@ int sim_rmdir(const char* path) {
 	char dir_name[STRLEN_ITEM_NAME] = {0};
 	struct inode inode_parent = {0};
 	struct inode inode_rmdir = {0};
-	struct carry_directory_item carry = {0};
+	struct carry_dir_item carry = {0};
+
+	// CONTROL
 
 	if (strlen(path) == 0) {
 		set_myerrno(Err_arg_missing);
@@ -33,20 +35,28 @@ int sim_rmdir(const char* path) {
 		goto fail;
 	}
 	// load inode to remove and its parent for removing record of the directory
-	if (get_inode(&inode_rmdir, path) == RETURN_FAILURE
-		|| get_inode(&inode_parent, dir_path) == RETURN_FAILURE) {
+	if (get_inode_wparent(&inode_rmdir, &inode_parent, path) == RETURN_FAILURE) {
+		goto fail;
+	}
+
+	// REMOVE
+
+	if (!is_directory_empty(&inode_rmdir)) {
+		set_myerrno(Err_dir_not_empty);
 		goto fail;
 	}
 
 	carry.id = inode_rmdir.id_inode;
 	strncpy(carry.name, dir_name, STRLEN_ITEM_NAME);
 
-	// delete directory itself
-	if (free_inode_directory(&inode_rmdir) == RETURN_FAILURE) {
+	// delete record from parent
+	// if this fails, which should not, only record about the inode is deleted,
+	// so it is possible to retrieve it with command 'fsck' --> lost+found/
+	if (iterate_links(&inode_parent, &carry, delete_block_item) == RETURN_FAILURE) {
 		goto fail;
 	}
-	// delete record from parent
-	if (iterate_links(&inode_parent, &carry, delete_block_item) == RETURN_FAILURE) {
+	// delete directory itself
+	if (free_inode_directory(&inode_rmdir) == RETURN_FAILURE) {
 		goto fail;
 	}
 

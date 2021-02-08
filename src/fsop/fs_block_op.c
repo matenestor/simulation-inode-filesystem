@@ -66,7 +66,7 @@ static bool search_block(const enum search_for search, const uint32_t* links,
 						 const size_t links_count, void* p_carry) {
 	bool ret = false;
 	size_t i, j;
-	struct carry_directory_item* carry = (struct carry_directory_item*) p_carry;
+	struct carry_dir_item* carry = (struct carry_dir_item*) p_carry;
 	struct directory_item block[sb.count_dir_items];
 
 	// check every link to block with directory items
@@ -118,39 +118,12 @@ ITERABLE(search_block_inode_name) {
 }
 
 /*
- * Delete directory item from block.
- */
-ITERABLE(delete_block_item) {
-	size_t i, j;
-	struct directory_item block[sb.count_dir_items];
-	struct carry_directory_item* carry = (struct carry_directory_item*) p_carry;
-
-	for (i = 0; i < links_count; ++i) {
-		if (links[i] == FREE_LINK)
-			continue;
-
-		fs_read_directory_item(block, sb.count_dir_items, links[i]);
-
-		for (j = 0; j < sb.count_dir_items; ++j) {
-			// record with id to delete found
-			if (block[j].id_inode == carry->id) {
-				block[j].id_inode = FREE_LINK;
-				strncpy(block[j].item_name, "", STRLEN_ITEM_NAME);
-				fs_write_directory_item(block, sb.count_dir_items, links[i]);
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-/*
  * Add directory item to block.
  */
 ITERABLE(add_block_item) {
 	size_t i, j;
 	struct directory_item block[sb.count_dir_items];
-	struct carry_directory_item* carry = (struct carry_directory_item*) p_carry;
+	struct carry_dir_item* carry = (struct carry_dir_item*) p_carry;
 
 	for (i = 0; i < links_count; ++i) {
 		if (links[i] == FREE_LINK)
@@ -163,6 +136,33 @@ ITERABLE(add_block_item) {
 			if (block[j].id_inode == FREE_LINK) {
 				block[j].id_inode = carry->id;
 				strncpy(block[j].item_name, carry->name, strlen(carry->name) + 1);
+				fs_write_directory_item(block, sb.count_dir_items, links[i]);
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+/*
+ * Delete directory item from block.
+ */
+ITERABLE(delete_block_item) {
+	size_t i, j;
+	struct directory_item block[sb.count_dir_items];
+	struct carry_dir_item* carry = (struct carry_dir_item*) p_carry;
+
+	for (i = 0; i < links_count; ++i) {
+		if (links[i] == FREE_LINK)
+			continue;
+
+		fs_read_directory_item(block, sb.count_dir_items, links[i]);
+
+		for (j = 0; j < sb.count_dir_items; ++j) {
+			// record with id to delete found
+			if (block[j].id_inode == carry->id) {
+				block[j].id_inode = FREE_LINK;
+				strncpy(block[j].item_name, "", STRLEN_ITEM_NAME);
 				fs_write_directory_item(block, sb.count_dir_items, links[i]);
 				return true;
 			}
@@ -189,6 +189,30 @@ ITERABLE(has_common_directories) {
 			if (strcmp(block[j].item_name, "") != 0
 					&& strcmp(block[j].item_name, ".") != 0
 					&& strcmp(block[j].item_name, "..") != 0) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+/*
+ * Check if there is space in directory inode for subdirectory record.
+ */
+ITERABLE(has_space_for_dir) {
+	size_t i, j;
+	struct directory_item block[sb.count_dir_items];
+
+	for (i = 0; i < links_count; ++i) {
+		// empty link in inode == new link to empty block can be created
+		if (links[i] == FREE_LINK)
+			return true;
+
+		fs_read_directory_item(block, sb.count_dir_items, links[i]);
+
+		for (j = 0; j < sb.count_dir_items; ++j) {
+			// empty record found == space for new one
+			if (strcmp(block[j].item_name, "") == 0) {
 				return true;
 			}
 		}

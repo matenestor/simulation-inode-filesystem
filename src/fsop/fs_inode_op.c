@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include <string.h>
 
 #include "fs_api.h"
 #include "fs_cache.h"

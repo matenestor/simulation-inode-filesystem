@@ -12,7 +12,7 @@
 
 int iterate_links(const struct inode* inode_source, void* carry, bool (*callback)());
 
-struct carry_directory_item {
+struct carry_dir_item {
 	uint32_t id;
 	char name[STRLEN_ITEM_NAME];
 };
@@ -22,6 +22,7 @@ ITERABLE(search_block_inode_name);
 ITERABLE(add_block_item);
 ITERABLE(delete_block_item);
 ITERABLE(has_common_directories);
+ITERABLE(has_space_for_dir);
 ITERABLE(list_items);
 
 #endif

@@ -1,10 +1,8 @@
 #include <string.h>
-#include <stddef.h>
 #include <libgen.h>
 
 #include "cmd_utils.h"
 #include "inode.h"
-#include "iteration_carry.h"
 
 #include "errors.h"
 
@@ -37,21 +35,4 @@ int split_path(const char* path, char* const dir_path, char* const dir_name) {
 		set_myerrno(Err_item_name_long);
 		return RETURN_FAILURE;
 	}
-}
-
-/*
- * 	Check if making new directory is possible.
- */
-bool item_exists(const struct inode* inode_parent, const char* dir_name) {
-	bool exists = false;
-	struct carry_directory_item carry = {0};
-
-	carry.id = FREE_LINK;
-	strncpy(carry.name, dir_name, STRLEN_ITEM_NAME);
-
-	// check if item already exists
-	if (iterate_links(inode_parent, &carry, search_block_inode_id) != RETURN_FAILURE) {
-		exists = true;
-	}
-	return exists;
 }

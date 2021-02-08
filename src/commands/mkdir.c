@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include <string.h>
 
 #include "fs_api.h"
@@ -20,9 +19,9 @@ int sim_mkdir(const char* path) {
 	char dir_name[STRLEN_ITEM_NAME] = {0};
 	struct inode inode_parent = {0};
 	struct inode inode_new_dir = {0};
-	struct carry_directory_item carry = {0};
-	// link number to empty block, in case all blocks of parent are full
-	uint32_t empty_block[1] = {0};
+	struct carry_dir_item carry = {0};
+
+	// CONTROL
 
 	if (strlen(path) == 0) {
 		set_myerrno(Err_arg_missing);
@@ -40,6 +39,14 @@ int sim_mkdir(const char* path) {
 		set_myerrno(Err_item_exists);
 		goto fail;
 	}
+	// check space for in parent for new subdirectory
+	if (iterate_links(&inode_parent, NULL, has_space_for_dir) == RETURN_FAILURE) {
+		set_myerrno(Err_dir_full);
+		goto fail;
+	}
+
+	// CREATION
+
 	// create inode for new directory record
 	if (create_inode_directory(&inode_new_dir, inode_parent.id_inode) == RETURN_FAILURE) {
 		goto fail;
@@ -48,17 +55,9 @@ int sim_mkdir(const char* path) {
 	carry.id = inode_new_dir.id_inode;
 	strncpy(carry.name, dir_name, strlen(dir_name));
 
-	// add record to parent inode about new directory
-	if (iterate_links(&inode_parent, &carry, add_block_item) == RETURN_FAILURE) {
-		// parent inode has all, so far created, blocks full
-		if (create_empty_links(empty_block, 1, &inode_parent) != RETURN_FAILURE) {
-			init_block_with_directories(empty_block[0]);
-			add_block_item(empty_block, 1, &carry);
-		} // error while creating new link, or parent inode is completely full of directories
-		else {
-			free_inode_directory(&inode_new_dir);
-			goto fail;
-		}
+	if (add_to_parent(&inode_parent, &carry) == RETURN_FAILURE) {
+		free_inode_directory(&inode_new_dir);
+		goto fail;
 	}
 
 	return RETURN_SUCCESS;

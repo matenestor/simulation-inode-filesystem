@@ -34,12 +34,12 @@ const char* my_strerror(const enum error_ err) {
 		case Err_signal_interrupt:		return "signal interrupt";
 		case Err_fs_name_missing:		return "filesystem name not provided";
 		case Err_fs_name_long:			return "filesystem name too long";
-		case Err_fs_not_loaded:			return "unable to load filesystem";
 		case Err_fs_size_sim_range:		return "filesystem size not in simulation range";
 		case Err_fs_size_sys_range:		return "filesystem size not in system range";
 		case Err_fs_size_nan:			return "filesystem size not a number";
 		case Err_fs_size_none:			return "filesystem size not provided";
 		case Err_arg_missing:			return "missing operand";
+		case Err_dir_full:				return "directory is full";
 		case Err_dir_not_empty:			return "directory not empty";
 		case Err_dir_arg_invalid:		return "invalid argument";
 		case Err_item_exists:			return "file exists";
@@ -50,7 +50,6 @@ const char* my_strerror(const enum error_ err) {
 		case Err_inode_no_inodes:		return "no more inodes available";
 		case Err_inode_no_links:		return "no more links in inode available";
 		case Err_block_no_blocks:		return "no more data space available";
-		case Err_block_full:			return "block is full";
 		case Err_fs_error:				return "Filesystem internal error. Try to use command 'fsck'.";
 		default:						return strerror(errno);
 	}

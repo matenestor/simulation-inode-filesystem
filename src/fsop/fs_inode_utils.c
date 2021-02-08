@@ -37,7 +37,7 @@ static int get_inode_ids(uint32_t* p_id_destination, uint32_t* p_id_parent, cons
 	char* dir = NULL;
 	char path_copy[strlen(path) + 1];
 	struct inode inode_dest = {0};
-	struct carry_directory_item carry = {0};
+	struct carry_dir_item carry = {0};
 
 	strncpy(path_copy, path, strlen(path) + 1);
 
@@ -86,6 +86,20 @@ static int get_inode_ids(uint32_t* p_id_destination, uint32_t* p_id_parent, cons
 }
 
 /*
+ *  Get inode from given path.
+ */
+int get_inode(struct inode* inode_dest, const char* path) {
+	uint32_t id_destination = FREE_LINK;
+	uint32_t id_parent = FREE_LINK;
+	if (get_inode_ids(&id_destination, &id_parent, path) != RETURN_FAILURE) {
+		fs_read_inode(inode_dest, 1, id_destination);
+		return RETURN_SUCCESS;
+	}
+	inode_dest->inode_type = Inode_type_free;
+	return RETURN_FAILURE;
+}
+
+/*
  *  Get inode and its parent from given path.
  */
 int get_inode_wparent(struct inode* inode_dest, struct inode* inode_parent, const char* path) {
@@ -94,20 +108,6 @@ int get_inode_wparent(struct inode* inode_dest, struct inode* inode_parent, cons
 	if (get_inode_ids(&id_destination, &id_parent, path) != RETURN_FAILURE) {
 		fs_read_inode(inode_dest, 1, id_destination);
 		fs_read_inode(inode_parent, 1, id_parent);
-		return RETURN_SUCCESS;
-	}
-	inode_dest->inode_type = Inode_type_free;
-	return RETURN_FAILURE;
-}
-
-/*
- *  Get inode from given path.
- */
-int get_inode(struct inode* inode_dest, const char* path) {
-	uint32_t id_destination = FREE_LINK;
-	uint32_t id_parent = FREE_LINK;
-	if (get_inode_ids(&id_destination, &id_parent, path) != RETURN_FAILURE) {
-		fs_read_inode(inode_dest, 1, id_destination);
 		return RETURN_SUCCESS;
 	}
 	inode_dest->inode_type = Inode_type_free;
@@ -141,7 +141,7 @@ static int handle_child_name(char** p_buffer, int* size_remaining, const uint32_
  *  If path would be too long for pwd, ".." is written at the beginning.
  */
 int get_path_to_root(char* dest_path, const size_t length_path, const struct inode* inode_source) {
-	struct carry_directory_item carry = {0};
+	struct carry_dir_item carry = {0};
 	struct inode inode_tmp = {0};
 	uint32_t id_parent = FREE_LINK;
 	int size_remaining = length_path;
@@ -191,10 +191,48 @@ fail:
 }
 
 /*
+ * Add record of new inode to its parent directory inode.
+ */
+int add_to_parent(struct inode* inode_parent, struct carry_dir_item* carry) {
+	// link number to empty block, in case all blocks of parent are full
+	uint32_t empty_block[1] = {0};
+
+	// add record to parent inode about new directory
+	if (iterate_links(inode_parent, carry, add_block_item) == RETURN_FAILURE) {
+		// parent inode has all, so far created, blocks full
+		if (create_empty_links(empty_block, 1, inode_parent) != RETURN_FAILURE) {
+			init_block_with_directories(empty_block[0]);
+			add_block_item(empty_block, 1, &carry);
+		} else {
+			// error while creating new link, or parent inode is completely full of directories
+			return RETURN_FAILURE;
+		}
+	}
+	return RETURN_SUCCESS;
+}
+
+/*
  * Check if directory, represented by given inode, is empty.
  */
 bool is_directory_empty(const struct inode* inode_source) {
 	// if directory doesn't have common directories,
 	// meaning other than "." and "..", then it is empty
 	return (bool) (iterate_links(inode_source, NULL, has_common_directories) == RETURN_FAILURE);
+}
+
+/*
+ * 	Check if making new directory is possible.
+ */
+bool item_exists(const struct inode* inode_parent, const char* dir_name) {
+	bool exists = false;
+	struct carry_dir_item carry = {0};
+
+	carry.id = FREE_LINK;
+	strncpy(carry.name, dir_name, STRLEN_ITEM_NAME);
+
+	// check if item already exists
+	if (iterate_links(inode_parent, &carry, search_block_inode_id) != RETURN_FAILURE) {
+		exists = true;
+	}
+	return exists;
 }
