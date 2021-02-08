@@ -53,6 +53,9 @@ static int get_inode_ids(uint32_t* p_id_destination, uint32_t* p_id_parent, cons
 	id_parent = get_parent_inode_id(&inode_dest);
 
 	dir = strtok(path_copy, SEPARATOR);
+	// getting root inode -- no while loop
+	if (dir == NULL)
+		ret_iter = RETURN_SUCCESS;
 
 	// go over all elements in given path
 	while (dir != NULL) {
@@ -118,7 +121,7 @@ static int handle_child_name(char** p_buffer, int* size_remaining, const uint32_
 	// enough space in buffer OR size is completely used, but current inode is root
 	if (*size_remaining > 2 || (*size_remaining >= 0 && id_inode == 1)) {
 		// move pointer before child name and write the name
-		p_buffer -= length_child_name;
+		*p_buffer -= length_child_name;
 		strncpy(*p_buffer, child_name, length_child_name);
 		// write separator before the name
 		*p_buffer -= 1;
