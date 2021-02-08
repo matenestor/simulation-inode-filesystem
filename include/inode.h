@@ -45,7 +45,7 @@ struct inode {
 };
 
 struct directory_item {
-	uint32_t fk_id_inode;				// i-node of file
+	uint32_t id_inode;					// i-node of file
 	char item_name[STRLEN_ITEM_NAME];	// name of item in directory
 };
 

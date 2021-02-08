@@ -22,7 +22,7 @@ static int32_t get_parent_inode_id(struct inode* inode_child) {
 	// it would be possible to iterate all blocks of inode, until ".." directory was found,
 	// but this is just faster and by filesystem definition, it will be always here,
 	// unless you touch raw byte data
-	return dot_dirs[1].fk_id_inode;
+	return dot_dirs[1].id_inode;
 }
 
 /*

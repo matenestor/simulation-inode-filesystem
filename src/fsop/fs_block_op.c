@@ -39,7 +39,7 @@ int init_block_with_directories(const uint32_t id_block) {
 	struct directory_item block[sb.count_dir_items];
 
 	for (i = 0; i < sb.count_dir_items; i++) {
-	    block->fk_id_inode = FREE_LINK;
+	    block->id_inode = FREE_LINK;
 		strncpy(block->item_name, "", STRLEN_ITEM_NAME);
 	}
 
@@ -51,11 +51,11 @@ int init_empty_dir_block(struct directory_item* block,
 						 const uint32_t id_self, const uint32_t id_parent) {
 
 	for (size_t i = 0; i < sb.count_dir_items; i++) {
-		block[i].fk_id_inode = FREE_LINK;
+		block[i].id_inode = FREE_LINK;
 		strncpy(block[i].item_name, "", STRLEN_ITEM_NAME);
 	}
-	block[0].fk_id_inode = id_self;
-	block[1].fk_id_inode = id_parent;
+	block[0].id_inode = id_self;
+	block[1].id_inode = id_parent;
 	strncpy(block[0].item_name, ".", 1);
 	strncpy(block[1].item_name, "..", 2);
 
@@ -82,13 +82,13 @@ static bool search_block(const enum search_for search, const uint32_t* links,
 			switch (search) {
 				case search_id:
 					if (strcmp(carry->name, block[j].item_name) == 0) {
-						carry->id = block[j].fk_id_inode;
+						carry->id = block[j].id_inode;
 						log_info("Got item id [%d] by name [%s].", carry->id, carry->name);
 						ret = true;
 					}
 					break;
 				case search_name:
-					if (block[j].fk_id_inode == carry->id) {
+					if (block[j].id_inode == carry->id) {
 						strncpy(carry->name, block[j].item_name, STRLEN_ITEM_NAME);
 						log_info("Got item name [%s] by id [%d].", carry->name, carry->id);
 						ret = true;
@@ -133,8 +133,8 @@ ITERABLE(delete_block_item) {
 
 		for (j = 0; j < sb.count_dir_items; ++j) {
 			// record with id to delete found
-			if (block[j].fk_id_inode == carry->id) {
-				block[j].fk_id_inode = FREE_LINK;
+			if (block[j].id_inode == carry->id) {
+				block[j].id_inode = FREE_LINK;
 				strncpy(block[j].item_name, "", STRLEN_ITEM_NAME);
 				fs_write_directory_item(block, sb.count_dir_items, links[i]);
 				return true;
@@ -160,8 +160,8 @@ ITERABLE(add_block_item) {
 
 		for (j = 0; j < sb.count_dir_items; ++j) {
 			// empty place for new item record found
-			if (block[j].fk_id_inode == FREE_LINK) {
-				block[j].fk_id_inode = carry->id;
+			if (block[j].id_inode == FREE_LINK) {
+				block[j].id_inode = carry->id;
 				strncpy(block[j].item_name, carry->name, strlen(carry->name) + 1);
 				fs_write_directory_item(block, sb.count_dir_items, links[i]);
 				return true;
@@ -213,12 +213,12 @@ ITERABLE(list_items) {
 		fs_read_directory_item(block, sb.count_dir_items, links[i]);
 
 		for (j = 0; j < sb.count_dir_items; ++j) {
-			if (block[j].fk_id_inode == FREE_LINK)
+			if (block[j].id_inode == FREE_LINK)
 				continue;
 
 			// read inodes in directory, so it is possible to print
 			// their size and if item is file or directory
-			fs_read_inode(&inode_ls, 1, block[j].fk_id_inode);
+			fs_read_inode(&inode_ls, 1, block[j].id_inode);
 			file_size = human_readable(unit, inode_ls.file_size);
 
 			if (inode_ls.inode_type == Inode_type_file) {

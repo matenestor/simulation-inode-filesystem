@@ -193,7 +193,7 @@ void block(const uint32_t id) {
 	fs_read_directory_item(block, sb.count_dir_items, id);
 	for (size_t i = 0; i < sb.count_dir_items; ++i) {
 		if (strcmp(block[i].item_name, "") != 0) {
-			printf("%d\t%s\n", block[i].fk_id_inode, block[i].item_name);
+			printf("%d\t%s\n", block[i].id_inode, block[i].item_name);
 		}
 	}
 }
