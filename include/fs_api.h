@@ -13,6 +13,8 @@
 
 int init_filesystem(const char* fsp, bool* is_formatted);
 void close_filesystem();
+uint32_t get_count_data_blocks(const off_t file_size);
+bool is_enough_space(const uint32_t count_blocks, const uint32_t count_empty_blocks);
 
 // FILESYSTEM BITMAP FUNCTIONS
 
@@ -38,9 +40,7 @@ int create_empty_links(uint32_t* buffer, size_t to_create, struct inode* inode_s
 
 int init_block_with_directories(uint32_t id_block);
 int init_empty_dir_block(struct directory_item* block, uint32_t id_self, uint32_t id_parent);
-uint32_t get_count_data_blocks(const off_t file_size);
-bool is_enough_space(const uint32_t count_blocks, const uint32_t count_empty_blocks);
-inline int incp_data_inplace(const uint32_t* links, const uint32_t links_count, FILE* file);
+extern inline int incp_data_inplace(const uint32_t* links, const uint32_t links_count, FILE* file);
 
 // FILESYSTEM UTILS FUNCTIONS
 

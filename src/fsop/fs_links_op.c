@@ -70,7 +70,7 @@ int iterate_links(const struct inode* inode_source, void* carry, bool (*callback
  * Link must not be used further in function,
  * which calls this function and it should be set to FREE_LINK.
  */
-static int free_link(const uint32_t id_block) {
+static int free_link_(const uint32_t id_block) {
 	// NOTE possible optimization -- static char block[FS_BLOCK_SIZE] = {0};
 	//  but FS_BLOCK_SIZE has to be visible here, now it is only in format.c
 	char block[sb.block_size];
@@ -81,19 +81,19 @@ static int free_link(const uint32_t id_block) {
 }
 
 /*
- * Free all links in given array. See 'free_link(uint32_t)'.
+ * Free all links in given array. See 'free_link_(uint32_t)'.
  */
-static int free_links_array(const uint32_t* links, const size_t count) {
+static int free_links_array_(const uint32_t* links, const size_t count) {
 	for (size_t i = 0; i < count; ++i) {
 		if (links[i] == FREE_LINK)
 			continue;
-		free_link(links[i]);
+		free_link_(links[i]);
 	}
 	return RETURN_SUCCESS;
 }
 
 static int free_links_direct(const uint32_t* links, const size_t count) {
-	free_links_array(links, count);
+	free_links_array_(links, count);
 	return RETURN_SUCCESS;
 }
 
@@ -110,7 +110,7 @@ static int free_links_indirect_1(const uint32_t* links, const size_t count) {
 			free_links_direct(block_direct, sb.count_links);
 
 			// free block with direct links
-			free_link(links[i]);
+			free_link_(links[i]);
 		}
 	}
 	return RETURN_SUCCESS;
@@ -129,7 +129,7 @@ static int free_links_indirect_2(const uint32_t* links, const size_t count) {
 			free_links_indirect_1(block_indirect, sb.count_links);
 
 			// free block with indirect links level 1
-			free_link(links[i]);
+			free_link_(links[i]);
 		}
 	}
 	return RETURN_SUCCESS;
@@ -249,7 +249,7 @@ static uint32_t create_indirect_2(uint32_t* root_link) {
 			// level 1 and turn on both blocks with indirect links level 1 and direct links again
 		else {
 			free_bitmap_field_data(id_block_direct);
-			free_link(id_block_indirect);
+			free_link_(id_block_indirect);
 		}
 	}
 	return id_block_data;

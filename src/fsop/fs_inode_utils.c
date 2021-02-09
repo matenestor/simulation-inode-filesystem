@@ -221,7 +221,7 @@ bool is_directory_empty(const struct inode* inode_source) {
 }
 
 /*
- * 	Check if making new directory is possible.
+ * 	Check if item exists in given inode directory.
  */
 bool item_exists(const struct inode* inode_parent, const char* dir_name) {
 	bool exists = false;

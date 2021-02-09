@@ -59,3 +59,44 @@ void close_filesystem() {
 		log_info("Filesystem closed.");
 	}
 }
+
+/*
+ * Get count of data blocks in filesystem, which is needed,
+ * in order to create new file inode.
+ */
+uint32_t get_count_data_blocks(const off_t file_size) {
+	if (file_size % sb.block_size != 0)
+		return file_size / sb.block_size;
+	else
+		return file_size / sb.block_size + 1;
+}
+
+/*
+ * Check if there is enough space in filesystem for new file inode.
+ * Function has to find out how many deep blocks will be needed to successfully create inode.
+ * 	count_blocks -- how many blocks will data need (no deep blocks for indirect links)
+ * 	count_empty_blocks -- how many blocks is available in filesystem
+ */
+bool is_enough_space(const uint32_t count_blocks, const uint32_t count_empty_blocks) {
+	size_t i, j;
+	uint32_t c_blocks = count_blocks;
+	size_t addition = 0;	// additional deep blocks for indirect links
+
+	for (i = 0; i < COUNT_DIRECT_LINKS && c_blocks > 0; ++i) {
+		c_blocks -= 1;
+	}
+	for (i = 0; i < COUNT_INDIRECT_LINKS_1 && c_blocks > 0; ++i) {
+		addition += 1;
+		c_blocks -= sb.count_links;
+	}
+	for (i = 0; i < COUNT_INDIRECT_LINKS_2 && c_blocks > 0; ++i) {
+		addition += 1;
+
+		for (j = 0; j < sb.count_links && c_blocks > 0; ++j) {
+			addition += 1;
+			c_blocks -= sb.count_links;
+		}
+	}
+
+	return (bool) (count_blocks + addition <= count_empty_blocks);
+}

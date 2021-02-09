@@ -41,7 +41,7 @@ struct superblock {
 struct inode {
 	uint32_t id_inode;								// i-node id
 	enum item inode_type;							// type of item in filesystem
-	uint32_t file_size;								// size of file
+	uint32_t file_size;								// size of file in Bytes
 	uint32_t direct[COUNT_DIRECT_LINKS];			// direct links
 	uint32_t indirect_1[COUNT_INDIRECT_LINKS_1];	// indirect links level 1 (pointer-data)
 	uint32_t indirect_2[COUNT_INDIRECT_LINKS_2];	// indirect links level 2 (pointer-pointer-data)
