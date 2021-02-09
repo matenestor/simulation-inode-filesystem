@@ -29,6 +29,9 @@ enum error_ {
     Err_inode_no_links		= 1018,
     Err_inode_no_inodes		= 1019,
     Err_block_no_blocks		= 1020,
+    Err_os_open_file		= 1021,
+	Err_os_file_too_big		= 1022,
+	Err_malloc				= 1023,
 };
 
 extern enum error_ my_errno;

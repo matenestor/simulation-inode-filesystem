@@ -12,7 +12,7 @@
 // filesystem file, which is being worked with
 FILE* filesystem;
 
-extern size_t fs_read_superblock(struct superblock*);
+extern size_t fs_read_superblock(struct superblock* buffer);
 
 
 int init_filesystem(const char* fsp, bool* is_formatted) {

@@ -20,6 +20,7 @@ uint32_t allocate_bitmap_field_inode();
 uint32_t allocate_bitmap_field_data();
 void free_bitmap_field_inode(int32_t id);
 void free_bitmap_field_data(int32_t id);
+uint32_t get_empty_fields_amount_data();
 
 // FILESYSTEM INODE FUNCTIONS
 
@@ -37,6 +38,9 @@ int create_empty_links(uint32_t* buffer, size_t to_create, struct inode* inode_s
 
 int init_block_with_directories(uint32_t id_block);
 int init_empty_dir_block(struct directory_item* block, uint32_t id_self, uint32_t id_parent);
+uint32_t get_count_data_blocks(const off_t file_size);
+bool is_enough_space(const uint32_t count_blocks, const uint32_t count_empty_blocks);
+inline int incp_data_inplace(const uint32_t* links, const uint32_t links_count, FILE* file);
 
 // FILESYSTEM UTILS FUNCTIONS
 
@@ -46,6 +50,7 @@ int get_path_to_root(char* dest_path, size_t length_path, const struct inode* in
 int add_to_parent(struct inode* inode_parent, struct carry_dir_item* carry);
 bool is_directory_empty(const struct inode* inode_source);
 bool item_exists(const struct inode* inode_parent, const char* dir_name);
+int update_size(struct inode* inode_target, const uint32_t file_size);
 
 // FILESYSTEM INPUT/OUTPUT FUNCTIONS
 
@@ -61,5 +66,8 @@ size_t fs_write_link(const uint32_t* buffer, size_t count, uint32_t id);
 size_t fs_write_data(const char* buffer, size_t count, uint32_t id);
 // flush
 void fs_flush();
+// system io
+size_t stream_incp(char* buffer, FILE* stream);
+size_t stream_outcp(const char* buffer, FILE* stream);
 
 #endif

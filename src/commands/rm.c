@@ -11,7 +11,7 @@ int sim_rm(const char* arg1) {
 	int ret = RETURN_FAILURE;
 	return ret;
 }
-//struct carry_directory_item carry = {inode_delete->id_inode, ""};
+//struct carry_dir_item carry = {inode_delete->id_inode, ""};
 //struct inode inode_parent = {0};
 //
 //// delete record from parent

@@ -14,6 +14,8 @@
 #define COUNT_INDIRECT_LINKS_1	1
 #define COUNT_INDIRECT_LINKS_2	1
 
+#define mb2b(mb)	((mb)*1024UL*1024UL)
+
 // types of inodes in filesystem
 enum item {
 	Inode_type_free,	// free, not occupied
@@ -33,6 +35,7 @@ struct superblock {
 	uint32_t addr_bm_data;			// address of start of data bitmap
 	uint32_t addr_inodes;			// address of start of i-nodes
 	uint32_t addr_data;				// address of start of data
+	uint32_t max_file_size;			// maximal size of file
 };
 
 struct inode {

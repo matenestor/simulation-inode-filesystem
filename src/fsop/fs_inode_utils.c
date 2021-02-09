@@ -236,3 +236,11 @@ bool item_exists(const struct inode* inode_parent, const char* dir_name) {
 	}
 	return exists;
 }
+
+/*
+ * Update size of file inode.
+ */
+int update_size(struct inode* inode_target, const uint32_t file_size) {
+	inode_target->file_size = file_size;
+	fs_write_inode(inode_target, 1, inode_target->id_inode);
+}

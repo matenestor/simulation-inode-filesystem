@@ -85,9 +85,6 @@ uint32_t create_inode_file(struct inode* new_inode) {
 	} else {
 		// no need for free_bitmap_field_inode(), because nothing
 		// was allocated, if 'id_free_inode' is RETURN_FAILURE
-		my_perror("filesystem");
-		set_myerrno(Err_inode_no_inodes);
-
 		log_error("Unable to create new inode.");
 	}
 
@@ -124,16 +121,13 @@ uint32_t create_inode_directory(struct inode* new_inode, const uint32_t id_paren
 		log_info("New directory inode created, id: [%d].", id_free_inode);
 	}
 	else {
-		my_perror("filesystem");
 		// getting empty bitmap fields turned them off, so turn them on again
 		if (id_free_inode != FREE_LINK) {
-			id_free_inode = FREE_LINK;
 			free_bitmap_field_inode(id_free_inode);
-			set_myerrno(Err_inode_no_inodes);
+			id_free_inode = FREE_LINK;
 		}
 		if (id_free_block != FREE_LINK) {
 			free_bitmap_field_data(id_free_block);
-			set_myerrno(Err_block_no_blocks);
 		}
 
 		log_error("Unable to create new inode.");

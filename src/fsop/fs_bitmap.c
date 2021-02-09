@@ -8,10 +8,11 @@
 #include "errors.h"
 #include "logger.h"
 
-extern void fs_seek_bm_inode(uint32_t);
-extern void fs_seek_bm_data(uint32_t);
-extern size_t fs_read_bool(bool*, size_t);
-extern size_t fs_write_bool(const bool*, size_t);
+
+extern void fs_seek_bm_inode(uint32_t index);
+extern void fs_seek_bm_data(uint32_t index);
+extern size_t fs_read_bool(bool* buffer, size_t count);
+extern size_t fs_write_bool(const bool* buffer, size_t count);
 
 
 static const bool bm_true = true;
@@ -61,6 +62,8 @@ static uint32_t get_empty_bitmap_field(void (*fs_seek_bm)(), void(*bitmap_field_
 			}
 		}
 		free(bitmap);
+	} else {
+		set_myerrno(Err_malloc);
 	}
 
 	return id;
@@ -114,6 +117,29 @@ void free_bitmap_field_inode(int32_t id) {
  */
 void free_bitmap_field_data(int32_t id) {
 	bitmap_field_data_on(id - 1);
+}
+
+/*
+ * Get amount of empty data blocks in filesystem.
+ */
+uint32_t get_empty_fields_amount_data() {
+	size_t i;
+	uint32_t empty_fields = 0;
+	bool* bitmap = malloc(sb.block_count);
+
+	if (bitmap) {
+		fs_seek_bm_data(0);
+		fs_read_bool(bitmap, sb.block_count);
+
+		for (i = 0; i < sb.block_count; ++i) {
+			if (bitmap[i])
+				++empty_fields;
+		}
+		free(bitmap);
+	} else {
+		set_myerrno(Err_malloc);
+	}
+	return empty_fields;
 }
 
 // --- SPECIFIC FUNCTIONS FOR format.c

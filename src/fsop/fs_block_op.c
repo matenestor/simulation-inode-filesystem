@@ -18,6 +18,9 @@ enum search_for {
 	search_name,
 };
 
+/*
+ * Transform number to human readable form and choose correct unit for it.
+ */
 static float human_readable(char* unit, const uint32_t file_size_) {
 	static short loop;
 	static float file_size;
@@ -34,6 +37,9 @@ static float human_readable(char* unit, const uint32_t file_size_) {
 	return file_size;
 }
 
+/*
+ * Init directory block inside filesystem with empty directories.
+ */
 int init_block_with_directories(const uint32_t id_block) {
 	size_t i;
 	struct directory_item block[sb.count_dir_items];
@@ -47,6 +53,10 @@ int init_block_with_directories(const uint32_t id_block) {
 	return RETURN_SUCCESS;
 }
 
+/*
+ * Init given directory block with dot dirs
+ * and rest of space with empty directories.
+ */
 int init_empty_dir_block(struct directory_item* block,
 						 const uint32_t id_self, const uint32_t id_parent) {
 
@@ -60,6 +70,47 @@ int init_empty_dir_block(struct directory_item* block,
 	strncpy(block[1].item_name, "..", 2);
 
 	return RETURN_SUCCESS;
+}
+
+/*
+ * Get count of data blocks in filesystem, which is needed,
+ * in order to create new file inode.
+ */
+uint32_t get_count_data_blocks(const off_t file_size) {
+	if (file_size % sb.block_size != 0)
+		return file_size / sb.block_size;
+	else
+		return file_size / sb.block_size + 1;
+}
+
+/*
+ * Check if there is enough space in filesystem for new file inode.
+ * Function has to find out how many deep blocks will be needed to successfully create inode.
+ * 	count_blocks -- how many blocks will data need (no deep blocks for indirect links)
+ * 	count_empty_blocks -- how many blocks is available in filesystem
+ */
+bool is_enough_space(const uint32_t count_blocks, const uint32_t count_empty_blocks) {
+	size_t i, j;
+	uint32_t c_blocks = count_blocks;
+	size_t addition = 0;	// additional deep blocks for indirect links
+
+	for (i = 0; i < COUNT_DIRECT_LINKS && c_blocks > 0; ++i) {
+		c_blocks -= 1;
+	}
+	for (i = 0; i < COUNT_INDIRECT_LINKS_1 && c_blocks > 0; ++i) {
+		addition += 1;
+		c_blocks -= sb.count_links;
+	}
+	for (i = 0; i < COUNT_INDIRECT_LINKS_2 && c_blocks > 0; ++i) {
+		addition += 1;
+
+		for (j = 0; j < sb.count_links && c_blocks > 0; ++j) {
+			addition += 1;
+			c_blocks -= sb.count_links;
+		}
+	}
+
+	return (bool) (count_blocks + addition <= count_empty_blocks);
 }
 
 static bool search_block(const enum search_for search, const uint32_t* links,
@@ -252,6 +303,63 @@ ITERABLE(list_items) {
 				printf("d %4.1f%s\t%s%s\n", file_size, unit, block[j].item_name, SEPARATOR);
 			}
 		}
+	}
+	// always return false, so all links are iterated
+	return false;
+}
+
+/*
+ * In-copy inode data from system file.
+ */
+ITERABLE(incp_data) {
+	size_t i;
+	char block[sb.block_size];
+	struct carry_stream* carry = (struct carry_stream*) p_carry;
+
+	for (i = 0; i < links_count; ++i) {
+		if (links[i] == FREE_LINK)
+			continue;
+
+		if (!feof(carry->file)) {
+			stream_incp(block, carry->file);
+			fs_write_data(block, sb.block_size, links[i]);
+		} else {
+			return true;
+		}
+	}
+	return false;
+}
+
+/*
+ * In-copy data inplace, when there is access to data blocks directly via links.
+ */
+inline int incp_data_inplace(const uint32_t* links, const uint32_t links_count, FILE* file) {
+	size_t i;
+	char block[sb.block_size];
+
+	for (i = 0; i < links_count; ++i) {
+		if (!feof(file)) {
+			stream_incp(block, file);
+			fs_write_data(block, sb.block_size, links[i]);
+		}
+	}
+	return RETURN_SUCCESS;
+}
+
+/*
+ * Out-copy inode data to system file.
+ */
+ITERABLE(outcp_data) {
+	size_t i;
+	char block[sb.block_size];
+	struct carry_stream* carry = (struct carry_stream*) p_carry;
+
+	for (i = 0; i < links_count; ++i) {
+		if (links[i] == FREE_LINK)
+			continue;
+
+		fs_read_data(block, sb.block_size, links[i]);
+		stream_outcp(block, carry->file);
 	}
 	// always return false, so all links are iterated
 	return false;

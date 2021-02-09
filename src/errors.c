@@ -38,6 +38,7 @@ const char* my_strerror(const enum error_ err) {
 		case Err_fs_size_sys_range:		return "filesystem size not in system range";
 		case Err_fs_size_nan:			return "filesystem size not a number";
 		case Err_fs_size_none:			return "filesystem size not provided";
+		case Err_fs_error:				return "Filesystem internal error. Try to use command 'fsck'.";
 		case Err_arg_missing:			return "missing operand";
 		case Err_dir_full:				return "directory is full";
 		case Err_dir_not_empty:			return "directory not empty";
@@ -50,7 +51,9 @@ const char* my_strerror(const enum error_ err) {
 		case Err_inode_no_inodes:		return "no more inodes available";
 		case Err_inode_no_links:		return "no more links in inode available";
 		case Err_block_no_blocks:		return "no more data space available";
-		case Err_fs_error:				return "Filesystem internal error. Try to use command 'fsck'.";
+		case Err_os_open_file:			return "couldn't open system file";
+		case Err_os_file_too_big:		return "system file is too big";
+		case Err_malloc:				return "not enough space for memory allocation";
 		default:						return strerror(errno);
 	}
 }

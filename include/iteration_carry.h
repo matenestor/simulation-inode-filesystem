@@ -1,6 +1,7 @@
 #ifndef ITERATION_CARRY_H
 #define ITERATION_CARRY_H
 
+#include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -17,6 +18,10 @@ struct carry_dir_item {
 	char name[STRLEN_ITEM_NAME];
 };
 
+struct carry_stream {
+	FILE* file;
+};
+
 ITERABLE(search_block_inode_id);
 ITERABLE(search_block_inode_name);
 ITERABLE(add_block_item);
@@ -24,5 +29,7 @@ ITERABLE(delete_block_item);
 ITERABLE(has_common_directories);
 ITERABLE(has_space_for_dir);
 ITERABLE(list_items);
+ITERABLE(incp_data);
+ITERABLE(outcp_data);
 
 #endif

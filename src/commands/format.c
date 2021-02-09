@@ -20,7 +20,6 @@
 // --- FILESYSTEM CONFIG
 
 #define LOG_DATETIME_LENGTH_	25
-#define mb2b(mb)				((mb)*1024UL*1024UL)
 #define isnegnum(cha)			(cha[0] == '-')
 #define isinrange(n)			((n) > 0 && (n) <= FS_SIZE_MAX)
 
@@ -119,6 +118,9 @@ static int init_superblock(const int size, const uint32_t block_cnt) {
 	sb.addr_bm_data = addr_bm_dat;
 	sb.addr_inodes = addr_in;
 	sb.addr_data = addr_dat;
+	sb.max_file_size = COUNT_DIRECT_LINKS * FS_BLOCK_SIZE
+						+ COUNT_INDIRECT_LINKS_1 * FS_BLOCK_SIZE * sb.count_links
+						+ COUNT_INDIRECT_LINKS_2 * FS_BLOCK_SIZE * sb.count_links * sb.count_links;
 
 	// write superblock to file
 	fs_write_superblock(&sb);

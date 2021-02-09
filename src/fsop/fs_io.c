@@ -144,3 +144,13 @@ size_t format_write_char(const char* buffer, const size_t count) {
 size_t format_write_directory_item(const struct directory_item* buffer, const size_t count) {
 	return fwrite(buffer, sizeof(struct directory_item), count, filesystem);
 }
+
+// --- SYSTEM IO
+
+size_t stream_incp(char* buffer, FILE* stream) {
+	return fread(buffer, 1, sb.block_size, stream);
+}
+
+size_t stream_outcp(const char* buffer, FILE* stream) {
+	return fwrite(buffer, 1, sb.block_size, stream);
+}
