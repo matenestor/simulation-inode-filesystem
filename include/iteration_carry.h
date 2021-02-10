@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
 #include "inode.h"
 
 // ITERABLE functions are called as callback functions
@@ -20,6 +21,7 @@ struct carry_dir_item {
 
 struct carry_stream {
 	FILE* file;
+	off_t data_count;
 };
 
 ITERABLE(search_block_inode_id);
@@ -31,5 +33,6 @@ ITERABLE(has_space_for_dir);
 ITERABLE(list_items);
 ITERABLE(incp_data);
 ITERABLE(outcp_data);
+ITERABLE(cat_data);
 
 #endif

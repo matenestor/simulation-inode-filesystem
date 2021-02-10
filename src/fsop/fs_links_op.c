@@ -10,6 +10,9 @@
 #include "errors.h"
 
 
+extern size_t get_count_links(const uint32_t* links);
+
+
 // ---------- ITERATE ---------------------------------------------------------
 
 /*
@@ -92,12 +95,12 @@ static int free_links_array_(const uint32_t* links, const size_t count) {
 	return RETURN_SUCCESS;
 }
 
-static int free_links_direct(const uint32_t* links, const size_t count) {
+static int free_all_direct_links(const uint32_t* links, const size_t count) {
 	free_links_array_(links, count);
 	return RETURN_SUCCESS;
 }
 
-static int free_links_indirect_1(const uint32_t* links, const size_t count) {
+static int free_all_indirect_1_links(const uint32_t* links, const size_t count) {
 	size_t i;
 	uint32_t block_direct[sb.count_links];
 
@@ -107,7 +110,7 @@ static int free_links_indirect_1(const uint32_t* links, const size_t count) {
 			fs_read_link(block_direct, sb.count_links, links[i]);
 
 			// free blocks where the direct links point to
-			free_links_direct(block_direct, sb.count_links);
+			free_all_direct_links(block_direct, sb.count_links);
 
 			// free block with direct links
 			free_link_(links[i]);
@@ -116,7 +119,7 @@ static int free_links_indirect_1(const uint32_t* links, const size_t count) {
 	return RETURN_SUCCESS;
 }
 
-static int free_links_indirect_2(const uint32_t* links, const size_t count) {
+static int free_all_indirect_2_links(const uint32_t* links, const size_t count) {
 	size_t i;
 	uint32_t block_indirect[sb.count_links];
 
@@ -126,7 +129,7 @@ static int free_links_indirect_2(const uint32_t* links, const size_t count) {
 			fs_read_link(block_indirect, sb.count_links, links[i]);
 
 			// free blocks where the indirect links level 1 point to
-			free_links_indirect_1(block_indirect, sb.count_links);
+			free_all_indirect_1_links(block_indirect, sb.count_links);
 
 			// free block with indirect links level 1
 			free_link_(links[i]);
@@ -135,22 +138,115 @@ static int free_links_indirect_2(const uint32_t* links, const size_t count) {
 	return RETURN_SUCCESS;
 }
 
-int free_all_links(struct inode* in_source) {
+/*
+ * Free all links from given inode.
+ */
+int free_all_links(struct inode* inode_source) {
 	size_t i;
 
 	// free links of given inode
-	free_links_direct(in_source->direct, COUNT_DIRECT_LINKS);
-	free_links_indirect_1(in_source->indirect_1, COUNT_INDIRECT_LINKS_1);
-	free_links_indirect_2(in_source->indirect_2, COUNT_INDIRECT_LINKS_2);
+	free_all_direct_links(inode_source->direct, COUNT_DIRECT_LINKS);
+	free_all_indirect_1_links(inode_source->indirect_1, COUNT_INDIRECT_LINKS_1);
+	free_all_indirect_2_links(inode_source->indirect_2, COUNT_INDIRECT_LINKS_2);
 
 	// make links free in the inode itself
 	for (i = 0; i < COUNT_DIRECT_LINKS; i++)
-		in_source->direct[i] = FREE_LINK;
+		inode_source->direct[i] = FREE_LINK;
 	for (i = 0; i < COUNT_INDIRECT_LINKS_1; i++)
-		in_source->indirect_1[i] = FREE_LINK;
+		inode_source->indirect_1[i] = FREE_LINK;
 	for (i = 0; i < COUNT_INDIRECT_LINKS_2; i++)
-		in_source->indirect_2[i] = FREE_LINK;
+		inode_source->indirect_2[i] = FREE_LINK;
 
+	return RETURN_SUCCESS;
+}
+
+static int free_direct_links(size_t* freed, const size_t to_free,
+							 uint32_t* direct_links, const size_t links_count) {
+	size_t i, ii;
+
+	for (i = links_count; i > 0 && *freed < to_free; --i) {
+		ii = i - 1;
+
+		if (direct_links[ii] == FREE_LINK)
+			continue;
+
+		// free data block and free link
+		free_link_(direct_links[ii]);
+		direct_links[ii] = FREE_LINK;
+		(*freed)++;
+	}
+	return RETURN_SUCCESS;
+}
+
+static int free_indirect_1_links(size_t* freed, const size_t to_free,
+								uint32_t* indirect_links_1, const size_t links_count) {
+	size_t i, ii;
+	uint32_t block[sb.count_links];
+
+	for (i = links_count; i > 0 && *freed < to_free; --i) {
+		ii = i - 1; // decrement only once in loop
+
+		if (indirect_links_1[ii] == FREE_LINK)
+			continue;
+
+		// free remaining data blocks,
+		// which direct links in the 'block' are pointing to
+		fs_read_link(block, sb.count_links, indirect_links_1[ii]);
+		free_direct_links(freed, to_free, block, sb.count_links);
+
+		// check if all direct links in 'block',
+		// which indirect link level 1 is pointing to, were freed
+		if (get_count_links(block) == 0) {
+			free_link_(indirect_links_1[ii]);
+			indirect_links_1[ii] = FREE_LINK;
+		}
+		// still some links in 'block' are remaining
+		else {
+			fs_write_link(block, sb.count_links, indirect_links_1[ii]);
+		}
+	}
+	return RETURN_SUCCESS;
+}
+
+static int free_indirect_2_links(size_t* freed, const size_t to_free,
+								uint32_t* indirect_links_2, const size_t links_count) {
+	size_t i, ii;
+	uint32_t block[sb.count_links];
+
+	for (i = links_count; i > 0 && *freed < to_free; --i) {
+		ii = i - 1; // decrement only once in loop
+
+		if (indirect_links_2[ii] == FREE_LINK)
+			continue;
+
+		// go through blocks of indirect links level 1
+		fs_read_link(block, sb.count_links, indirect_links_2[ii]);
+		free_indirect_1_links(freed, to_free, block, sb.count_links);
+
+		// check if all indirect links level 1 in 'block',
+		// which indirect link level 2 is pointing to, were freed
+		if (get_count_links(block) == 0) {
+			free_link_(indirect_links_2[ii]);
+			indirect_links_2[ii] = FREE_LINK;
+		}
+		// still some links in 'block' are remaining
+		else {
+			fs_write_link(block, sb.count_links, indirect_links_2[ii]);
+		}
+	}
+	return RETURN_SUCCESS;
+}
+
+/*
+ * Free given amount of links from given inode. (Including deep data blocks for indirect links.)
+ * Start from end of the inode -- with indirect links highest level to direct links.
+ */
+int free_amount_of_links(struct inode* inode_target, const size_t to_free) {
+	size_t freed = 0;
+	free_indirect_2_links(&freed, to_free, inode_target->indirect_2, COUNT_INDIRECT_LINKS_2);
+	free_indirect_1_links(&freed, to_free, inode_target->indirect_1, COUNT_INDIRECT_LINKS_1);
+	free_direct_links(&freed, to_free, inode_target->direct, COUNT_DIRECT_LINKS);
+	fs_write_inode(inode_target, 1, inode_target->id_inode);
 	return RETURN_SUCCESS;
 }
 
@@ -160,7 +256,7 @@ int free_all_links(struct inode* in_source) {
 static int reset_created_links(uint32_t* links_tmp, const uint32_t* links_source, const size_t count) {
 	for (size_t i = 0; i < count; ++i) {
 		if (links_tmp[i] != links_source[i]) {
-			free_links_direct(&links_tmp[i], count);
+			free_all_direct_links(&links_tmp[i], count);
 			links_tmp[i] = FREE_LINK;
 		}
 	}
@@ -186,7 +282,7 @@ static uint32_t init_block_with_links_(const uint32_t id_block) {
 	uint32_t block[sb.count_links];
 
 	if ((free_id = init_link_()) != FREE_LINK) {
-		memset(block, FREE_LINK, sb.count_links);
+		memset(block, FREE_LINK, sizeof(block));
 		block[0] = free_id;
 		fs_write_link(block, sb.count_links, id_block);
 	}
@@ -219,7 +315,7 @@ static int32_t create_indirect_1(uint32_t* root_link) {
 			// id of indirect link lvl 1 is assigned to given parameter
 			*root_link = id_block_direct;
 		}
-			// block was not initialized == no more free blocks
+		// block was not initialized == no more free blocks
 		else {
 			free_bitmap_field_data(id_block_direct);
 		}
@@ -245,8 +341,8 @@ static uint32_t create_indirect_2(uint32_t* root_link) {
 			// id of indirect link lvl 2 is assigned to given parameter
 			*root_link = id_block_indirect;
 		}
-			// blocks were not initialized == no more free blocks, so clear block with indirect links
-			// level 1 and turn on both blocks with indirect links level 1 and direct links again
+		// blocks were not initialized == no more free blocks, so clear block with indirect links
+		// level 1 and turn on both blocks with indirect links level 1 and direct links again
 		else {
 			free_bitmap_field_data(id_block_direct);
 			free_link_(id_block_indirect);
@@ -263,7 +359,7 @@ static int create_direct_links(uint32_t** buffer, size_t* created, const size_t 
 	for (i = 0; i < links_count && *created < to_create; ++i) {
 		if (direct_links[i] == FREE_LINK) {
 			if ((tmp_link = create_direct()) == FREE_LINK) {
-				break; // error
+				return RETURN_FAILURE; // error
 			}
 
 			direct_links[i] = tmp_link;
@@ -272,7 +368,7 @@ static int create_direct_links(uint32_t** buffer, size_t* created, const size_t 
 			(*created)++;
 		}
 	}
-	return *created == to_create ? RETURN_SUCCESS : RETURN_FAILURE;
+	return RETURN_SUCCESS;
 }
 
 static int create_indirect_links_1(uint32_t** buffer, size_t* created, const size_t to_create,
@@ -286,7 +382,7 @@ static int create_indirect_links_1(uint32_t** buffer, size_t* created, const siz
 			// for 'create_indirect_1()', start of the indirect link lvl 1 is given as argument,
 			// and set inside the function, and end of the link is returned
 			if ((tmp_link = create_indirect_1(&indirect_links_1[i])) == FREE_LINK) {
-				break; // error
+				return RETURN_FAILURE; // error
 			}
 
 			**buffer = tmp_link;
@@ -295,14 +391,15 @@ static int create_indirect_links_1(uint32_t** buffer, size_t* created, const siz
 		}
 
 		fs_read_link(direct_links, sb.count_links, indirect_links_1[i]);
+		// create possible remaining direct links in new block
 		if (create_direct_links(buffer, created, to_create,
 								direct_links, sb.count_links) == RETURN_FAILURE) {
-			break; // error
+			return RETURN_FAILURE; // error
 		}
 		fs_write_link(direct_links, sb.count_links, indirect_links_1[i]);
 	}
 
-	return *created == to_create ? RETURN_SUCCESS : RETURN_FAILURE;
+	return RETURN_SUCCESS;
 }
 
 static int create_indirect_links_2(uint32_t** buffer, size_t* created, const size_t to_create,
@@ -316,7 +413,7 @@ static int create_indirect_links_2(uint32_t** buffer, size_t* created, const siz
 			// for 'create_indirect_2()', start of the indirect link lvl 2 is given as argument,
 			// and set inside the function, and end of the link is returned
 			if ((tmp_link = create_indirect_2(&indirect_links_2[i])) == FREE_LINK) {
-				break; // error
+				return RETURN_FAILURE; // error
 			}
 
 			**buffer = tmp_link;
@@ -325,14 +422,15 @@ static int create_indirect_links_2(uint32_t** buffer, size_t* created, const siz
 		}
 
 		fs_read_link(indirect_links_1, sb.count_links, indirect_links_2[i]);
+		// create possible remaining indirect links level 1 in new block
 		if (create_indirect_links_1(buffer, created, to_create,
 									indirect_links_1, sb.count_links) == RETURN_FAILURE) {
-			break; // error
+			return RETURN_FAILURE; // error
 		}
 		fs_write_link(indirect_links_1, sb.count_links, indirect_links_2[i]);
 	}
 
-	return *created == to_create ? RETURN_SUCCESS : RETURN_FAILURE;
+	return RETURN_SUCCESS;
 }
 
 /*

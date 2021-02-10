@@ -20,6 +20,7 @@ int sim_incp(const char* path_source, const char* path_target) {
 	struct stat st = {0};
 	FILE* f_source = NULL;
 	uint32_t count_blocks = 0;
+	uint32_t count_existing_block = 0;
 	uint32_t count_empty_blocks = 0;
 	uint32_t* links = NULL;
 	char dir_path[strlen(path_target) + 1];
@@ -63,7 +64,7 @@ int sim_incp(const char* path_source, const char* path_target) {
 		goto fail;
 	}
 	// check enough blocks and space in filesystem
-	if (get_empty_fields_amount_data() || !is_enough_space(count_blocks, count_empty_blocks)) {
+	if (count_empty_blocks == 0 || !is_enough_space(count_blocks, count_empty_blocks)) {
 		set_myerrno(Err_block_no_blocks);
 		goto fail;
 	}
@@ -83,25 +84,34 @@ int sim_incp(const char* path_source, const char* path_target) {
 			goto fail;
 		}
 
-		free_all_links(&inode_target); // TODO this..
-		create_empty_links(links, count_blocks, &inode_target); // TODO ..and this is not good, when error
+		// current amount of data block, that inode is pointing at
+		count_existing_block = get_count_data_blocks(inode_target.file_size);
 
-		// TODO better to check diff of inode file size
-		//  carry_stream.file = f_source;
-		incp_data_inplace(links, count_blocks, f_source);
-		update_size(&inode_target, count_blocks * sb.block_size);
+		// create missing blocks
+		if (count_blocks > count_existing_block) {
+			create_empty_links(links, count_blocks - count_existing_block, &inode_target);
+		}
+		// remove additional blocks
+		else if (count_blocks < count_existing_block) {
+			free_amount_of_links(&inode_target, count_existing_block - count_blocks);
+		}
+
+		// rewrite
+		carry_stream.file = f_source;
+		iterate_links(&inode_target, &carry_stream, incp_data);
+		update_size(&inode_target, st.st_size);
 	}
 	// create inode to copy file into, exists in filesystem
 	else if (create_inode_file(&inode_target) != RETURN_FAILURE) {
 		// create links in new inode to data blocks
 		if ((create_empty_links(links, count_blocks, &inode_target)) == RETURN_FAILURE) {
-			free_inode_directory(&inode_target);
+			free_inode_file(&inode_target);
 			goto fail;
 		}
-		// copy data
-		incp_data_inplace(links, count_blocks, f_source);
-		update_size(&inode_target, count_blocks * sb.block_size);
-
+		// get parent of new file -- its path is new file's 'dir_path'
+		if (get_inode(&inode_parent, dir_path) == RETURN_FAILURE) {
+			goto fail;
+		}
 		// add new inode to parent
 		carry_dir.id = inode_target.id_inode;
 		strncpy(carry_dir.name, dir_name, strlen(dir_name));
@@ -109,6 +119,10 @@ int sim_incp(const char* path_source, const char* path_target) {
 			free_inode_directory(&inode_target);
 			goto fail;
 		}
+
+		// copy data
+		incp_data_inplace(links, count_blocks, f_source);
+		update_size(&inode_target, st.st_size);
 	}
 	else {
 		goto fail;

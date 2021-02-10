@@ -147,10 +147,10 @@ size_t format_write_directory_item(const struct directory_item* buffer, const si
 
 // --- SYSTEM IO
 
-size_t stream_incp(char* buffer, FILE* stream) {
-	return fread(buffer, 1, sb.block_size, stream);
+size_t stream_incp(char* buffer, const size_t count, FILE* stream) {
+	return fread(buffer, sizeof(char), count, stream);
 }
 
-size_t stream_outcp(const char* buffer, FILE* stream) {
-	return fwrite(buffer, 1, sb.block_size, stream);
+size_t stream_outcp(const char* buffer, const size_t count, FILE* stream) {
+	return fwrite(buffer, sizeof(char), count, stream);
 }

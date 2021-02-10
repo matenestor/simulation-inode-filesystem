@@ -7,6 +7,8 @@
 #include "logger.h"
 
 
+extern int free_all_links(struct inode* inode_source);
+
 // ---------- INODE FREE ------------------------------------------------------
 
 /*

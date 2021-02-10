@@ -19,18 +19,18 @@ int sim_outcp(const char* path_source, const char* path_target) {
 
 	// CONTROL
 
-	if (strlen(path_source) == 0 || strlen(path_target) || 0) {
+	if (strlen(path_source) == 0 || strlen(path_target) == 0) {
 		set_myerrno(Err_arg_missing);
 		goto fail;
 	}
-	if (get_inode(&inode_source, path_target) == RETURN_FAILURE) {
+	if (get_inode(&inode_source, path_source) == RETURN_FAILURE) {
 		goto fail;
 	}
 	if (inode_source.inode_type != Inode_type_file) {
 		set_myerrno(Err_item_not_file);
 		goto fail;
 	}
-	if ((f_target = fopen(path_target, "wb")) != NULL) {
+	if ((f_target = fopen(path_target, "wb")) == NULL) {
 		set_myerrno(Err_os_open_file);
 		log_error("Unable to open system file [%s].", path_target);
 		goto fail;
@@ -39,6 +39,7 @@ int sim_outcp(const char* path_source, const char* path_target) {
 	// OUT-COPY
 
 	carry.file = f_target;
+	carry.data_count = inode_source.file_size;
 	iterate_links(&inode_source, &carry, outcp_data);
 
 	fclose(f_target);

@@ -33,14 +33,14 @@ uint32_t create_inode_directory(struct inode* new_inode, uint32_t id_parent);
 
 // FILESYSTEM LINK FUNCTIONS
 
-int free_all_links(struct inode* in_source);
+int free_amount_of_links(struct inode* inode_target, const size_t to_free);
 int create_empty_links(uint32_t* buffer, size_t to_create, struct inode* inode_source);
 
 // FILESYSTEM DATA BLOCK FUNCTIONS
 
 int init_block_with_directories(uint32_t id_block);
 int init_empty_dir_block(struct directory_item* block, uint32_t id_self, uint32_t id_parent);
-extern inline int incp_data_inplace(const uint32_t* links, const uint32_t links_count, FILE* file);
+int incp_data_inplace(const uint32_t* links, const uint32_t links_count, FILE* file);
 
 // FILESYSTEM UTILS FUNCTIONS
 
@@ -66,8 +66,5 @@ size_t fs_write_link(const uint32_t* buffer, size_t count, uint32_t id);
 size_t fs_write_data(const char* buffer, size_t count, uint32_t id);
 // flush
 void fs_flush();
-// system io
-size_t stream_incp(char* buffer, FILE* stream);
-size_t stream_outcp(const char* buffer, FILE* stream);
 
 #endif

@@ -35,8 +35,8 @@ int sim_info(const char* item) {
 						(double) inode_item.file_size / 1024 / 1024);
 			printf(" inode id: %d\n", inode_item.id_inode);
 			print_links(" direct links:", inode_item.direct, COUNT_DIRECT_LINKS);
-			print_links(" indrct links lvl 1:", inode_item.indirect_1, COUNT_INDIRECT_LINKS_1);
-			print_links(" indrct links lvl 2:", inode_item.indirect_2, COUNT_INDIRECT_LINKS_2);
+			print_links(" indirect links lvl 1:", inode_item.indirect_1, COUNT_INDIRECT_LINKS_1);
+			print_links(" indirect links lvl 2:", inode_item.indirect_2, COUNT_INDIRECT_LINKS_2);
 
 			ret = RETURN_SUCCESS;
 		}

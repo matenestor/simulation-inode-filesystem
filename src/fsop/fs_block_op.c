@@ -13,6 +13,10 @@
 #include "logger.h"
 
 
+// system io
+extern size_t stream_incp(char* buffer, const size_t count, FILE* stream);
+extern size_t stream_outcp(const char* buffer, const size_t count, FILE* stream);
+
 enum search_for {
 	search_id,
 	search_name,
@@ -24,7 +28,7 @@ enum search_for {
 static float human_readable(char* unit, const uint32_t file_size_) {
 	static short loop;
 	static float file_size;
-	static char units[][3] = {"B", "KB", "MB", "GB"};
+	static char units[][3] = {"B ", "KB", "MB", "GB"};
 
 	loop = 0;
 	file_size = file_size_;
@@ -70,6 +74,21 @@ int init_empty_dir_block(struct directory_item* block,
 	strncpy(block[1].item_name, "..", 2);
 
 	return RETURN_SUCCESS;
+}
+
+/*
+ *  Get count of links in deep block.
+ */
+size_t get_count_links(const uint32_t* links) {
+	size_t i;
+	size_t links_count = 0;
+
+	for (i = 0; i < sb.count_links; ++i) {
+		if (links[i] == FREE_LINK)
+			continue;
+		links_count++;
+	}
+	return links_count;
 }
 
 static bool search_block(const enum search_for search, const uint32_t* links,
@@ -256,10 +275,10 @@ ITERABLE(list_items) {
 			file_size = human_readable(unit, inode_ls.file_size);
 
 			if (inode_ls.inode_type == Inode_type_file) {
-				printf("- %4.1f%s\t%s\n", file_size, unit, block[j].item_name);
+				printf("- %6.1f%s\t%s\n", file_size, unit, block[j].item_name);
 			}
 			else if (inode_ls.inode_type == Inode_type_dirc) {
-				printf("d %4.1f%s\t%s%s\n", file_size, unit, block[j].item_name, SEPARATOR);
+				printf("d %6.1f%s\t%s%s\n", file_size, unit, block[j].item_name, SEPARATOR);
 			}
 		}
 	}
@@ -271,36 +290,58 @@ ITERABLE(list_items) {
  * In-copy inode data from system file.
  */
 ITERABLE(incp_data) {
-	size_t i;
+	bool ret = false;
+	size_t i, read;
 	char block[sb.block_size];
 	struct carry_stream* carry = (struct carry_stream*) p_carry;
 
-	for (i = 0; i < links_count; ++i) {
+	for (i = 0; i < links_count && !ret; ++i) {
 		if (links[i] == FREE_LINK)
 			continue;
 
 		if (!feof(carry->file)) {
-			stream_incp(block, carry->file);
+			read = stream_incp(block, sb.block_size, carry->file);
+			// in case last block of data has smaller amount, fill rest with zeros
+			// and write, so there are no leftover data
+			if (read < sb.block_size) {
+				memset(block + read, '\0', sb.block_size - read);
+				ret = true;
+			}
 			fs_write_data(block, sb.block_size, links[i]);
-		} else {
-			return true;
+		}
+		else {
+			// this else is probably redundant, since feof() is met,
+			// when fread() reads less than 'sb.block_size'
+			ret = true;
 		}
 	}
-	return false;
+	return ret;
 }
 
 /*
  * In-copy data inplace, when there is access to data blocks directly via links.
  */
-inline int incp_data_inplace(const uint32_t* links, const uint32_t links_count, FILE* file) {
-	size_t i;
+int incp_data_inplace(const uint32_t* links, const uint32_t links_count, FILE* file) {
+	size_t i, read;
 	char block[sb.block_size];
 
 	for (i = 0; i < links_count; ++i) {
+		// because 'links_count' is calculated exactly according to
+		// size of given file, this should be always true
 		if (!feof(file)) {
-			stream_incp(block, file);
-			fs_write_data(block, sb.block_size, links[i]);
+			read = stream_incp(block, sb.block_size, file);
+			fs_write_data(block, read, links[i]);
 		}
+	}
+
+	// in case last block of data has smaller amount, fill rest with zeros
+	// and write, so there are no leftover data
+	// condition is not in loop, because it is sure, that it will be very last link,
+	// which will need this check... not like in 'incp_data', where is checked
+	// block of links, so 'i' is iterated further and index of last link could get lost
+	if (read < sb.block_size) {
+		memset(block + read, '\0', sb.block_size - read);
+		fs_write_data(block, sb.block_size, links[i - 1]);
 	}
 	return RETURN_SUCCESS;
 }
@@ -309,69 +350,49 @@ inline int incp_data_inplace(const uint32_t* links, const uint32_t links_count, 
  * Out-copy inode data to system file.
  */
 ITERABLE(outcp_data) {
+	bool ret = false;
 	size_t i;
+	size_t to_write = 0;
 	char block[sb.block_size];
 	struct carry_stream* carry = (struct carry_stream*) p_carry;
+
+	for (i = 0; i < links_count && carry->data_count > 0; ++i) {
+		if (links[i] == FREE_LINK)
+			continue;
+
+		// set amount of data necessary to write
+		if (carry->data_count > sb.block_size) {
+			to_write = sb.block_size;
+			carry->data_count -= sb.block_size;
+		}
+		else {
+			to_write = carry->data_count;
+			carry->data_count = 0;
+			ret = true;
+		}
+
+		fs_read_data(block, sb.block_size, links[i]);
+		stream_outcp(block, to_write, carry->file);
+	}
+	// always return false, so all links are iterated
+	return ret;
+}
+
+/*
+ * Concatenate data block and print the result.
+ */
+ITERABLE(cat_data) {
+	size_t i;
+	char block[sb.block_size + 1];
+	block[sb.block_size] = '\0';
 
 	for (i = 0; i < links_count; ++i) {
 		if (links[i] == FREE_LINK)
 			continue;
 
 		fs_read_data(block, sb.block_size, links[i]);
-		stream_outcp(block, carry->file);
+		printf("%s", block);
 	}
 	// always return false, so all links are iterated
 	return false;
 }
-
-// PROBABLY NOT NEEDED AT ALL -------------------------------------------------
-
-///*
-// *  Get count of links in indirect links block.
-// */
-//  // TODO if needed, check whole block
-//size_t get_count_links(int32_t* source) {
-//	size_t items = 0;
-//	int32_t* p_link = source;
-//
-//	while (*p_link != FREE_LINK && items < sb.count_links) {
-//		++p_link;
-//		++items;
-//	}
-//
-//	return items;
-//}
-//
-///*
-// *  Get count of directory records in directory block.
-// */
-//  // TODO if needed, check whole block
-//size_t get_count_dirs(struct directory_item* source) {
-//	size_t items = 0;
-//	struct directory_item* p_dir = source;
-//
-//	while (strcmp(p_dir->item_name, "") != 0 && items < sb.count_dir_items) {
-//		++p_dir;
-//		++items;
-//	}
-//
-//	return items;
-//}
-//
-///*
-// *  Check if block is full of directory items.
-// */
-//static bool is_block_full_dirs(const int32_t id_block) {
-//	struct directory_item block[sb.count_dir_items];
-//	fs_read_directory_item(block, sb.count_dir_items, id_block);
-//	return (bool) (get_count_dirs(block) == sb.count_dir_items);
-//}
-//
-///*
-// *  Check if block is full of links.
-// */
-//static bool is_block_full_links(const int32_t id_block) {
-//	int32_t block[sb.count_links];
-//	fs_read_link(block, sb.count_links, id_block);
-//	return (bool) (get_count_links(block) == sb.count_links);
-//}

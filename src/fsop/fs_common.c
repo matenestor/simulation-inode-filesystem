@@ -65,7 +65,7 @@ void close_filesystem() {
  * in order to create new file inode.
  */
 uint32_t get_count_data_blocks(const off_t file_size) {
-	if (file_size % sb.block_size != 0)
+	if (file_size % sb.block_size == 0)
 		return file_size / sb.block_size;
 	else
 		return file_size / sb.block_size + 1;

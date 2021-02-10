@@ -188,7 +188,7 @@ void inode(const uint32_t id) {
 	print_links(" indrct links lvl 2:", inode_item.indirect_2, COUNT_INDIRECT_LINKS_2);
 }
 
-void block(const uint32_t id) {
+void block_dirs(const uint32_t id) {
 	struct directory_item block[sb.count_dir_items];
 	fs_read_directory_item(block, sb.count_dir_items, id);
 	for (size_t i = 0; i < sb.count_dir_items; ++i) {
@@ -196,6 +196,24 @@ void block(const uint32_t id) {
 			printf("%d\t%s\n", block[i].id_inode, block[i].item_name);
 		}
 	}
+}
+
+void block_data(const uint32_t id) {
+	char block[sb.block_size + 1];
+	fs_read_data(block, sb.block_size, id);
+	block[sb.block_size] = '\0';
+	printf("%s", block);
+}
+
+void block_links(const uint32_t id) {
+	uint32_t block[sb.count_links];
+	fs_read_link(block, sb.count_links, id);
+	for (size_t i = 0; i < sb.count_links; ++i) {
+		if (block[i] != FREE_LINK) {
+			printf("%d ", block[i]);
+		}
+	}
+	puts("");
 }
 
 int sim_debug(const char* flag, const char* str_id) {
@@ -208,11 +226,21 @@ int sim_debug(const char* flag, const char* str_id) {
 		debug_blocks();
 	} else {
 		id = strtol(str_id, NULL, 10);
+
 		if (strcmp(flag, "i") == 0) {
 			inode(id);
 		}
+
 		else if (strcmp(flag, "b") == 0) {
-			block(id);
+			block_dirs(id);
+		}
+
+		else if (strcmp(flag, "d") == 0) {
+			block_data(id);
+		}
+
+		else if (strcmp(flag, "l") == 0) {
+			block_links(id);
 		}
 	}
 
