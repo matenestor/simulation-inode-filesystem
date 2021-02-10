@@ -9,10 +9,10 @@
 #include "logger.h"
 
 
-extern void fs_seek_bm_inode(uint32_t index);
-extern void fs_seek_bm_data(uint32_t index);
-extern size_t fs_read_bool(bool* buffer, size_t count);
-extern size_t fs_write_bool(const bool* buffer, size_t count);
+extern void fs_seek_bm_inode(const uint32_t index);
+extern void fs_seek_bm_data(const uint32_t index);
+extern size_t fs_read_bool(bool* buffer, const size_t count);
+extern size_t fs_write_bool(const bool* buffer, const size_t count);
 
 
 static const bool bm_true = true;

@@ -26,10 +26,9 @@
 extern FILE* filesystem;
 
 extern size_t fs_write_superblock(const struct superblock*);
-extern size_t format_write_bool(const bool*, size_t);
-extern size_t format_write_inode(const struct inode*, size_t);
-extern size_t format_write_char(const char*, size_t);
-extern size_t format_write_directory_item(const struct directory_item*, size_t);
+extern size_t format_write_bool(const bool* buffer, const size_t count);
+extern size_t format_write_inode(const struct inode* buffer, const size_t count);
+extern size_t format_write_char(const char* buffer, const size_t count);
 extern void format_root_bm_off();
 
 /*

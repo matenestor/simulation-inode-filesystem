@@ -141,10 +141,6 @@ size_t format_write_char(const char* buffer, const size_t count) {
 	return fwrite(buffer, sizeof(char), count, filesystem);
 }
 
-size_t format_write_directory_item(const struct directory_item* buffer, const size_t count) {
-	return fwrite(buffer, sizeof(struct directory_item), count, filesystem);
-}
-
 // --- SYSTEM IO
 
 size_t stream_incp(char* buffer, const size_t count, FILE* stream) {
