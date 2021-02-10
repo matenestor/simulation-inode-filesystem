@@ -23,12 +23,12 @@ int sim_cat(const char* path_source) {
 	if (get_inode(&inode_source, path_source) == RETURN_FAILURE) {
 		goto fail;
 	}
-	if (inode_source.inode_type == Inode_type_dirc) {
+	if (inode_source.inode_type != Inode_type_file) {
 		set_myerrno(Err_item_not_file);
 		goto fail;
 	}
 
-	// OUT-COPY
+	// CONCATENATE
 
 	iterate_links(&inode_source, NULL, cat_data);
 

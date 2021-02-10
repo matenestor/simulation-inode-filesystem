@@ -38,6 +38,10 @@ int sim_rmdir(const char* path) {
 	if (get_inode_wparent(&inode_rmdir, &inode_parent, path) == RETURN_FAILURE) {
 		goto fail;
 	}
+	if (inode_rmdir.inode_type != Inode_type_dirc) {
+		set_myerrno(Err_item_not_directory);
+		goto fail;
+	}
 
 	// REMOVE
 
