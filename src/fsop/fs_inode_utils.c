@@ -137,8 +137,9 @@ static int handle_child_name(char** p_buffer, int* size_remaining, const uint32_
 }
 
 /*
- *  Get path from root to actual inode by going back from it to root over parents.
- *  If path would be too long for pwd, ".." is written at the beginning.
+ * Get path from root to actual inode by going back from it to root over parents.
+ * If path would be too long for pwd, ".." is written at the beginning.
+ * It is possible to get path only for directory inodes.
  */
 int get_path_to_root(char* dest_path, const size_t length_path, const struct inode* inode_source) {
 	struct carry_dir_item carry = {0};
