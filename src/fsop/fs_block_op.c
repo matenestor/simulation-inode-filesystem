@@ -70,8 +70,8 @@ int init_empty_dir_block(struct directory_item* block,
 	}
 	block[0].id_inode = id_self;
 	block[1].id_inode = id_parent;
-	strncpy(block[0].item_name, ".", 1);
-	strncpy(block[1].item_name, "..", 2);
+	strncpy(block[0].item_name, ".", 2);
+	strncpy(block[1].item_name, "..", 3);
 
 	return RETURN_SUCCESS;
 }
@@ -320,7 +320,8 @@ ITERABLE(incp_data) {
  * In-copy data inplace, when there is access to data blocks directly via links.
  */
 int incp_data_inplace(const uint32_t* links, const uint32_t links_count, FILE* file) {
-	size_t i, read;
+	size_t i;
+	size_t read = sb.block_size;
 	char block[sb.block_size];
 
 	for (i = 0; i < links_count; ++i) {

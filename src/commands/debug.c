@@ -10,7 +10,7 @@
 
 static void debug_superblock() {
 	puts("> SUPERBLOCK ---------------------------");
-	printf(" size of superblock: %d B\n"
+	printf(" size of superblock: %ld B\n"
 			" signature: %s\n"
 			" volume descriptor: %s\n"
 			" disk size: %d MB\n"

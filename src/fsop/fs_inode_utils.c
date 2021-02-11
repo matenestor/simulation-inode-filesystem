@@ -133,7 +133,7 @@ static int handle_child_name(char** p_buffer, int* size_remaining, const uint32_
 	// path to root is too long
 	else {
 		*p_buffer -= 2;
-		strncpy(*p_buffer, "..", 2);
+		strncpy(*p_buffer, "..", 3);
 		return RETURN_FAILURE;
 	}
 }
@@ -246,4 +246,5 @@ bool item_exists(const struct inode* inode_parent, const char* dir_name) {
 int update_size(struct inode* inode_target, const uint32_t file_size) {
 	inode_target->file_size = file_size;
 	fs_write_inode(inode_target, 1, inode_target->id_inode);
+	return RETURN_SUCCESS;
 }

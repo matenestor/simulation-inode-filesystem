@@ -1,31 +1,30 @@
 # C compiler
 CC = gcc
-# C++ flags
-CFLAGS = -std=c99 -pedantic -Wall -O
+# C flags
+CFLAGS = -Wall -pedantic -O
 
 # name of executable
 BIN = inode
 
-# logging directory
-DIR_LOG = log/
-
 # source directories
 ROOT = src/
-DIR_SRC = $(ROOT) $(ROOT)commands/
+DIR_SRC = $(ROOT) $(ROOT)commands/ $(ROOT)fsop/
+
 # headers directory
-DIR_INC = $(ROOT)inc/
+DIR_INC = include
+
 # object directory
 DIR_OBJ = obj/
 
 # include location of dependent header files
 IDEPS = -I$(DIR_INC)
 
-# each .c file in source folder
+# all .c files in source folder
 SRC = $(foreach DSRC, $(DIR_SRC), $(wildcard $(DSRC)*.c))
 # all object files
 OBJ = $(patsubst $(ROOT)%.c, $(DIR_OBJ)%.c.o, $(SRC))
 
-RM = rm -rf
+RM = rm -r
 
 
 all: mkdirs $(BIN)
@@ -42,7 +41,6 @@ $(DIR_OBJ)%.o: $(ROOT)%
 
 mkdirs:
 	mkdir -p $(patsubst $(ROOT)%, $(DIR_OBJ)%, $(DIR_SRC))
-	mkdir -p $(DIR_LOG)
 
 .PHONY: mkdirs
 
