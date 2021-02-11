@@ -3,6 +3,7 @@
 
 #include "fs_api.h"
 #include "iteration_carry.h"
+#include "cmd_utils.h"
 
 #include "errors.h"
 #include "logger.h"
@@ -12,6 +13,10 @@
  * Remove file from filesystem.
  */
 int sim_rm(const char* path) {
+	log_info("rm: [%s]", path);
+
+	char dir_path[strlen(path) + 1];
+	char dir_name[STRLEN_ITEM_NAME] = {0};
 	struct inode inode_rm = {0};
 	struct inode inode_parent = {0};
 	struct carry_dir_item carry = {0};
@@ -20,6 +25,10 @@ int sim_rm(const char* path) {
 
 	if (strlen(path) == 0) {
 		set_myerrno(Err_arg_missing);
+		goto fail;
+	}
+	// get source's paths and names
+	if (split_path(path, dir_path, dir_name) == RETURN_FAILURE) {
 		goto fail;
 	}
 	if (get_inode_wparent(&inode_rm, &inode_parent, path) == RETURN_FAILURE) {
@@ -33,6 +42,7 @@ int sim_rm(const char* path) {
 	// REMOVE
 
 	carry.id = inode_rm.id_inode;
+	strncpy(carry.name, dir_name, STRLEN_ITEM_NAME);
 
 	// delete record from parent
 	// if this fails, which should not, only record about the inode is deleted,

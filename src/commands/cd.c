@@ -24,12 +24,12 @@ static int handle_prompt_change() {
  * Change directory in filesystem.
  */
 int sim_cd(const char* path) {
+	log_info("cd: [%s]", path);
+
 	// +2 if path == 0, then SEPARATOR and \0 will be copied
 	size_t path_length = strlen(path);
 	char target[path_length + 2];
 	struct inode inode_cd;
-
-	log_info("cd: [%s]", path);
 
     // target is either path, or root, when no path is given
 	if (path_length > 0) {

@@ -23,6 +23,8 @@ static int print_links(const char* type, const uint32_t* links, const size_t lin
  * Print information about given inode.
  */
 int sim_info(const char* item) {
+	log_info("info: [%s]", item);
+
 	int ret = RETURN_FAILURE;
 	struct inode inode_item = {0};
 

@@ -9,7 +9,9 @@
 
 // TODO longterm fs_config.h
 // TODO longterm error messages with arguments given
+// TODO longterm more meaningful logger messages -- with reason of fail
 // TODO longterm malloc in format.c, instead of CACHE_SIZE
+// TODO longterm sort ls by item type and by alphabet
 
 void signal_handler(int signum) {
 	// with ctrl+C, program has to be terminated here, because else it waits for input

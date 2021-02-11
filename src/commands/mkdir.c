@@ -13,7 +13,7 @@
  * Make new directory in filesystem.
  */
 int sim_mkdir(const char* path) {
-	log_info("mkdir: creating [%s]", path);
+	log_info("mkdir: [%s]", path);
 
 	char dir_path[strlen(path) + 1];
 	char dir_name[STRLEN_ITEM_NAME] = {0};

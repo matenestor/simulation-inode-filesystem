@@ -13,6 +13,8 @@
  * Copy file from simulation filesystem outside to normal filesystem.
  */
 int sim_outcp(const char* path_source, const char* path_target) {
+	log_info("outcp: [%s] [%s]", path_source, path_target);
+
 	struct inode inode_source = {0};
 	FILE* f_target = NULL;
 	struct carry_stream carry = {0};

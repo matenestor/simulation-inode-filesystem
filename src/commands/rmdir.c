@@ -13,7 +13,7 @@
  * Remove directory from filesystem, if it is not empty.
  */
 int sim_rmdir(const char* path) {
-	log_info("rmdir: removing [%s]", path);
+	log_info("rmdir: [%s]", path);
 
 	char dir_path[strlen(path) + 1];
 	char dir_name[STRLEN_ITEM_NAME] = {0};

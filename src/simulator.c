@@ -160,10 +160,10 @@ void run() {
 				case CMD_CAT_ID:	error = sim_cat(arg1);			break;
 				case CMD_LS_ID:		error = sim_ls(arg1);			break;
 				case CMD_INFO_ID:	error = sim_info(arg1);			break;
-				case CMD_MV_ID:		error = sim_mv(arg1, arg2);		break; // TODO
-				case CMD_CP_ID:		error = sim_cp(arg1, arg2);		break; // TODO
-				case CMD_RM_ID:		error = sim_rm(arg1);			break; // TODO
-				case CMD_CD_ID:		error = sim_cd(arg1);			break; // TODO
+				case CMD_MV_ID:		error = sim_mv(arg1, arg2);		break;
+				case CMD_CP_ID:		error = sim_cp(arg1, arg2);		break;
+				case CMD_RM_ID:		error = sim_rm(arg1);			break;
+				case CMD_CD_ID:		error = sim_cd(arg1);			break;
 				case CMD_MKDIR_ID:	error = sim_mkdir(arg1);		break;
 				case CMD_RMDIR_ID:	error = sim_rmdir(arg1);		break;
 				case CMD_INCP_ID:	error = sim_incp(arg1, arg2);	break;

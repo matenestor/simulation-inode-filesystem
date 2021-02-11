@@ -17,6 +17,8 @@
  * Copy file from normal filesystem into simulation filesystem.
  */
 int sim_incp(const char* path_source, const char* path_target) {
+	log_info("incp: [%s] [%s]", path_source, path_target);
+
 	struct stat st = {0};
 	FILE* f_source = NULL;
 	uint32_t count_blocks = 0;

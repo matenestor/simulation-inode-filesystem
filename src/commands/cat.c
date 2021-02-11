@@ -12,6 +12,8 @@
  * Concatenate file from filesystem and print it to standard output.
  */
 int sim_cat(const char* path_source) {
+	log_info("cat: [%s]", path_source);
+
 	struct inode inode_source = {0};
 
 	// CONTROL

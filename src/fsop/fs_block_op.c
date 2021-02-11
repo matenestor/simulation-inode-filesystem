@@ -112,14 +112,12 @@ static bool search_block(const enum search_for search, const uint32_t* links,
 				case search_id:
 					if (strcmp(carry->name, block[j].item_name) == 0) {
 						carry->id = block[j].id_inode;
-						log_info("Got item id [%d] by name [%s].", carry->id, carry->name);
 						ret = true;
 					}
 					break;
 				case search_name:
 					if (block[j].id_inode == carry->id) {
 						strncpy(carry->name, block[j].item_name, STRLEN_ITEM_NAME);
-						log_info("Got item name [%s] by id [%d].", carry->name, carry->id);
 						ret = true;
 					}
 					break;
@@ -189,7 +187,7 @@ ITERABLE(delete_block_item) {
 
 		for (j = 0; j < sb.count_dir_items; ++j) {
 			// record with id to delete found
-			if (block[j].id_inode == carry->id) {
+			if (block[j].id_inode == carry->id && strcmp(block[j].item_name, carry->name) == 0) {
 				block[j].id_inode = FREE_LINK;
 				strncpy(block[j].item_name, "", STRLEN_ITEM_NAME);
 				fs_write_directory_item(block, sb.count_dir_items, links[i]);
@@ -400,7 +398,6 @@ ITERABLE(cat_data) {
 /*
  * Copy data from one inode to another.
  */
-// TODO test
 ITERABLE(copy_data) {
 	bool ret = false;
 	size_t i;

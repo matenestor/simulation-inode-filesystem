@@ -73,7 +73,7 @@ static int get_inode_ids(uint32_t* p_id_destination, uint32_t* p_id_parent, cons
 			id_parent = FREE_LINK;
 			id_dest = FREE_LINK;
 			set_myerrno(Err_item_not_exists);
-			log_error("Item does not exist [%s]\n", path);
+			log_error("Item does not exist [%s]", path);
 			break;
 		}
 
@@ -112,6 +112,7 @@ int get_inode_wparent(struct inode* inode_dest, struct inode* inode_parent, cons
 		return RETURN_SUCCESS;
 	}
 	inode_dest->inode_type = Inode_type_free;
+	inode_parent->inode_type = Inode_type_free;
 	return RETURN_FAILURE;
 }
 

@@ -81,8 +81,6 @@ uint32_t allocate_bitmap_field_inode() {
 			set_myerrno(Err_inode_no_inodes);
 			log_error("Out of inodes.");
 		}
-	} else {
-		log_info("Free inode, index: [%d].", index);
 	}
 	return index;
 }
@@ -99,8 +97,6 @@ uint32_t allocate_bitmap_field_data() {
 			set_myerrno(Err_block_no_blocks);
 			log_error("Out of data blocks.");
 		}
-	} else {
-		log_info("Free data block, index: [%d].", index);
 	}
 	return index;
 }
