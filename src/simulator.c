@@ -134,9 +134,9 @@ void run() {
 
 		// clear buffers, so command doesn't accidentally receive
 		// wrong argument(s) from previous iteration
-		BUFFER_CLEAR(command, strlen(command));
-		BUFFER_CLEAR(arg1, strlen(arg1));
-		BUFFER_CLEAR(arg2, strlen(arg2));
+		BUFFER_CLEAR(command);
+		BUFFER_CLEAR(arg1);
+		BUFFER_CLEAR(arg2);
 
 		if (handle_input(command, arg1, arg2) == RETURN_SUCCESS) {
 			cmd_id = get_command_id(command);

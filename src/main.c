@@ -7,6 +7,9 @@
 #include "logger.h"
 #include "errors.h"
 
+// TODO longterm fs_config.h
+// TODO longterm error messages with arguments given
+// TODO longterm malloc in format.c, instead of CACHE_SIZE
 
 void signal_handler(int signum) {
 	// with ctrl+C, program has to be terminated here, because else it waits for input
@@ -18,7 +21,6 @@ void signal_handler(int signum) {
 	log_info("Terminating: %s", my_strerror(my_errno));
 	exit(EXIT_SUCCESS);
 }
-
 
 int main(int argc, char const **argv) {
 	#if DEBUG

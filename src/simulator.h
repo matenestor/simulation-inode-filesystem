@@ -32,7 +32,7 @@
 
 // input buffer size for user
 #define BUFFER_INPUT_LENGTH			2048 // enough space to fill 80x24 screen and a bit more
-#define BUFFER_CLEAR(dest, count)	memset(dest, '\0', count)
+#define BUFFER_CLEAR(dest)			memset(dest, '\0', sizeof(dest))
 #define isoverflow(c)				(!((c) == '\n' || (c) == '\0'))
 
 bool is_formatted;		// is filesystem formatted or not
