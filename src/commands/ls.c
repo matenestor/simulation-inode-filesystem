@@ -38,7 +38,8 @@ int sim_ls(const char* path) {
 		default:
 			set_myerrno(Err_item_not_exists);
 			log_warning("ls: unable to list [%s]", path);
+			return RETURN_FAILURE;
 	}
 
-	return 0;
+	return RETURN_SUCCESS;
 }

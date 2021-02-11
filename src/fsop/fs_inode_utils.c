@@ -77,6 +77,7 @@ static int get_inode_ids(uint32_t* p_id_destination, uint32_t* p_id_parent, cons
 			break;
 		}
 
+		memset(carry.name, '\0', sizeof(carry.name));
 		dir = strtok(NULL, SEPARATOR);
 	}
 	*p_id_destination = id_dest;
