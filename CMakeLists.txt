@@ -26,8 +26,10 @@ add_executable(KIV_ZOS_sp
         src/commands/rmdir.c
         src/commands/incp.c
         src/commands/outcp.c
+        src/commands/du.c
         src/commands/load.c
         src/commands/fsck.c
+        src/commands/corrupt.c
         src/commands/format.c
         src/commands/debug.c
 
@@ -38,4 +40,4 @@ add_executable(KIV_ZOS_sp
         src/fsop/fs_inode_utils.c
         src/fsop/fs_io.c
         src/fsop/fs_links_op.c
-        )
+)
