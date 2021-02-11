@@ -92,7 +92,7 @@ int init_simulation(const char* path) {
 	return ret;
 }
 
-int get_command_id(const char* command) {
+static int get_command_id(const char* command) {
 	if (strcmp(command, CMD_PWD) == 0)		return CMD_PWD_ID;
 	if (strcmp(command, CMD_CAT) == 0)		return CMD_CAT_ID;
 	if (strcmp(command, CMD_LS) == 0)		return CMD_LS_ID;

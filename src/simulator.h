@@ -47,21 +47,4 @@ struct superblock sb = {0};
 // inode, where user currently is
 struct inode in_actual = {0};
 
-extern int sim_pwd();
-extern int sim_cat(const char*);
-extern int sim_ls(const char*);
-extern int sim_info(const char*);
-extern int sim_mv(const char*, const char*);
-extern int sim_cp(const char*, const char*);
-extern int sim_rm(const char*);
-extern int sim_cd(const char*);
-extern int sim_mkdir(const char*);
-extern int sim_rmdir(const char*);
-extern int sim_incp(const char*, const char*);
-extern int sim_outcp(const char*, const char*);
-extern int sim_load(const char*);
-extern int sim_fsck();
-extern int sim_format(const char*, const char*);
-extern int sim_debug(const char*, const char*);
-
 #endif

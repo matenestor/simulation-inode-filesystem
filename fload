@@ -1,0 +1,19 @@
+format 20
+pwd
+ls
+mkdir newdir
+cd newdir
+mkdir delete
+incp /home/kuub/tmp/vid.mp4 vid
+cp vid delete
+cd
+incp /home/kuub/tmp/small small
+mv newdir/vid /
+rm newdir/delete/vid
+info /newdir/delete/
+rmdir newdir/delete
+cat small
+rmdir newdir
+ls
+outcp vid /home/kuub/tmp/loadvid.mp4
+exit
