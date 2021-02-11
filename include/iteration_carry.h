@@ -24,6 +24,11 @@ struct carry_stream {
 	off_t data_count;
 };
 
+struct carry_copy {
+	uint32_t* dest_links;
+	size_t links_count;
+};
+
 ITERABLE(search_block_inode_id);
 ITERABLE(search_block_inode_name);
 ITERABLE(add_block_item);
@@ -34,5 +39,6 @@ ITERABLE(list_items);
 ITERABLE(incp_data);
 ITERABLE(outcp_data);
 ITERABLE(cat_data);
+ITERABLE(copy_data);
 
 #endif

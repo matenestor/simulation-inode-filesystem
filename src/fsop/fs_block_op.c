@@ -396,3 +396,31 @@ ITERABLE(cat_data) {
 	// always return false, so all links are iterated
 	return false;
 }
+
+/*
+ * Copy data from one inode to another.
+ */
+// TODO test
+ITERABLE(copy_data) {
+	bool ret = false;
+	size_t i;
+	char block[sb.block_size];
+	struct carry_copy* carry = (struct carry_copy*) p_carry;
+
+	for (i = 0; i < links_count && carry->links_count > 0; ++i) {
+		if (links[i] == FREE_LINK)
+			continue;
+
+		fs_read_data(block, sb.block_size, links[i]);
+		fs_write_data(block, sb.block_size, *(carry->dest_links));
+		// move pointer to another link
+		carry->dest_links++;
+		// decrement remaining links of data to copy
+		carry->links_count--;
+
+		if (carry->links_count == 0)
+			ret = true;
+	}
+	// always return false, so all links are iterated
+	return ret;
+}

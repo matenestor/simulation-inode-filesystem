@@ -51,7 +51,7 @@ int sim_incp(const char* path_source, const char* path_target) {
 		log_error("Unable to open system file [%s].", path_source);
 		goto fail;
 	}
-	// count of data block with data (only -- no deep blocks of indirect links)
+	// count of data blocks with data (only -- no deep blocks of indirect links)
 	count_blocks = get_count_data_blocks(st.st_size);
 	if (count_blocks >= sb.block_count
 		|| count_blocks * sb.block_size > sb.max_file_size) {
@@ -104,7 +104,7 @@ int sim_incp(const char* path_source, const char* path_target) {
 	// create inode to copy file into, exists in filesystem
 	else if (create_inode_file(&inode_target) != RETURN_FAILURE) {
 		// create links in new inode to data blocks
-		if ((create_empty_links(links, count_blocks, &inode_target)) == RETURN_FAILURE) {
+		if (create_empty_links(links, count_blocks, &inode_target) == RETURN_FAILURE) {
 			free_inode_file(&inode_target);
 			goto fail;
 		}
@@ -130,6 +130,8 @@ int sim_incp(const char* path_source, const char* path_target) {
 
 	free(links);
 	fclose(f_source);
+	// can be set during 'get_inode()', when checking if file exists
+	reset_myerrno();
 	return RETURN_SUCCESS;
 
 fail:
