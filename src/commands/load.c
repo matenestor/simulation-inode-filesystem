@@ -25,7 +25,7 @@ int perform_command(const char* command, const char* arg1, const char* arg2) {
 	if (strcmp(command, CMD_RMDIR) == 0)	return sim_rmdir(arg1);
 	if (strcmp(command, CMD_INCP) == 0)		return sim_incp(arg1, arg2);
 	if (strcmp(command, CMD_OUTCP) == 0)	return sim_outcp(arg1, arg2);
-	if (strcmp(command, CMD_DU) == 0)		return sim_du();
+	if (strcmp(command, CMD_DF) == 0)		return sim_df();
 	if (strcmp(command, CMD_FSCK) == 0)		return sim_fsck();
 
 	// forbidden or unknown commands

@@ -138,6 +138,22 @@ uint32_t get_empty_fields_amount_data() {
 	return empty_fields;
 }
 
+/*
+ * Read whole inodes bitmap to given buffer pointer.
+ */
+void read_whole_bitmap_inodes(bool* bitmap) {
+	fs_seek_bm_inode(0);
+	fs_read_bool(bitmap, sb.block_count);
+}
+
+/*
+ * Read whole data bitmap to given buffer pointer.
+ */
+void read_whole_bitmap_data(bool* bitmap) {
+	fs_seek_bm_data(0);
+	fs_read_bool(bitmap, sb.block_count);
+}
+
 // --- SPECIFIC FUNCTIONS FOR format.c
 
 void format_root_bm_off() {

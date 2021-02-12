@@ -13,7 +13,7 @@
 #define CMD_RMDIR		"rmdir"
 #define CMD_INCP		"incp"
 #define CMD_OUTCP		"outcp"
-#define CMD_DU			"du"
+#define CMD_DF			"df"
 #define CMD_LOAD		"load"
 #define CMD_FSCK		"fsck"
 #define CMD_CORRUPT		"corrupt"
@@ -35,7 +35,7 @@
 #define CMD_RMDIR_ID	10
 #define CMD_INCP_ID		11
 #define CMD_OUTCP_ID	12
-#define CMD_DU_ID		13
+#define CMD_DF_ID		13
 #define CMD_LOAD_ID		14
 #define CMD_FSCK_ID		15
 #define CMD_CORRUPT_ID	16
@@ -56,7 +56,7 @@ extern int sim_mkdir(const char*);
 extern int sim_rmdir(const char*);
 extern int sim_incp(const char*, const char*);
 extern int sim_outcp(const char*, const char*);
-extern int sim_du();
+extern int sim_df();
 extern int sim_load(const char*);
 extern int sim_fsck();
 extern int sim_corrupt();

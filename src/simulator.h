@@ -23,7 +23,7 @@
 					"  rmdir   DIRECTORY         Remove the DIRECTORY, if they are empty.\n" \
 					"  incp    SOURCE DEST       Copy file from SOURCE on local HDD to DEST in filesystem.\n" \
 					"  outcp   SOURCE DEST       Copy file from SOURCE in filesystem to DEST on local HDD.\n" \
-                    "  du                        Print disk usage -- used inodes, blocks and remaining space.\n" \
+                    "  df                        Print disk filesystem usage -- used and remaining space and inodes.\n" \
 					"  load    FILE              Load FILE with commands and start executing them (1 command = 1 line).\n" \
 					"  fsck                      Check and repair the filesystem.\n" \
                     "  corrupt                   Corrupts filesystem by randomly deleting item records from blocks.\n" \

@@ -23,6 +23,8 @@ uint32_t allocate_bitmap_field_data();
 void free_bitmap_field_inode(int32_t id);
 void free_bitmap_field_data(int32_t id);
 uint32_t get_empty_fields_amount_data();
+void read_whole_bitmap_inodes(bool* bitmap);
+void read_whole_bitmap_data(bool* bitmap);
 
 // FILESYSTEM INODE FUNCTIONS
 

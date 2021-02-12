@@ -105,7 +105,7 @@ static int get_command_id(const char* command) {
 	if (strcmp(command, CMD_RMDIR) == 0)	return CMD_RMDIR_ID;
 	if (strcmp(command, CMD_INCP) == 0)		return CMD_INCP_ID;
 	if (strcmp(command, CMD_OUTCP) == 0)	return CMD_OUTCP_ID;
-	if (strcmp(command, CMD_DU) == 0)		return CMD_DU_ID;
+	if (strcmp(command, CMD_DF) == 0)		return CMD_DF_ID;
 	if (strcmp(command, CMD_LOAD) == 0)		return CMD_LOAD_ID;
 	if (strcmp(command, CMD_FSCK) == 0)		return CMD_FSCK_ID;
 	if (strcmp(command, CMD_CORRUPT) == 0)	return CMD_CORRUPT_ID;
@@ -170,7 +170,7 @@ void run() {
 				case CMD_RMDIR_ID:	error = sim_rmdir(arg1);		break;
 				case CMD_INCP_ID:	error = sim_incp(arg1, arg2);	break;
 				case CMD_OUTCP_ID:	error = sim_outcp(arg1, arg2);	break;
-				case CMD_DU_ID:		error = sim_du(arg1, arg2);		break; // TODO
+				case CMD_DF_ID:		error = sim_df(arg1, arg2);		break;
 				case CMD_LOAD_ID:	error = sim_load(arg1);			break;
 				case CMD_FSCK_ID:	error = sim_fsck();				break;
 				case CMD_CORRUPT_ID:error = sim_corrupt();			break;

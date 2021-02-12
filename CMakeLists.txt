@@ -26,7 +26,7 @@ add_executable(KIV_ZOS_sp
         src/commands/rmdir.c
         src/commands/incp.c
         src/commands/outcp.c
-        src/commands/du.c
+        src/commands/df.c
         src/commands/load.c
         src/commands/fsck.c
         src/commands/corrupt.c
