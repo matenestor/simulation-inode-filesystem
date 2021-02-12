@@ -465,11 +465,16 @@ int create_empty_links(uint32_t* buffer, const size_t to_create, struct inode* i
 	if (created == to_create) {
 		// total usage of space of directory inode is increased here
 		// and calculated are only leafs of links -- no deep blocks with indirect links
-		if (inode_source->inode_type == Inode_type_dirc) {
-			inode_source->file_size += (to_create * sb.block_size);
+		if (inode_tmp.inode_type == Inode_type_dirc) {
+			inode_tmp.file_size += (to_create * sb.block_size);
 		}
 		memcpy(inode_source, &inode_tmp, sizeof(struct inode));
-		fs_write_inode(&inode_tmp, 1, inode_tmp.id_inode);
+		fs_write_inode(inode_source, 1, inode_source->id_inode);
+
+		// update 'inode_actual', if it was the one, where new links were created
+		if (inode_source->id_inode == inode_actual.id_inode) {
+			fs_read_inode(&inode_actual, 1, inode_source->id_inode);
+		}
 		return RETURN_SUCCESS;
 	}
 

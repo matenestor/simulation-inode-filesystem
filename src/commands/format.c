@@ -254,7 +254,7 @@ static int init_root() {
 	fs_write_directory_item(dir_root, 2, ROOT_ID);
 
 	// cache root inode to simulation cache
-	memcpy(&in_actual, &inode_root, sizeof(struct inode));
+	memcpy(&inode_actual, &inode_root, sizeof(struct inode));
 	puts("done");
 
 	return RETURN_SUCCESS;

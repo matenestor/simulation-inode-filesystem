@@ -172,8 +172,8 @@ void run() {
 				case CMD_OUTCP_ID:	error = sim_outcp(arg1, arg2);	break;
 				case CMD_DU_ID:		error = sim_du(arg1, arg2);		break; // TODO
 				case CMD_LOAD_ID:	error = sim_load(arg1);			break;
-				case CMD_FSCK_ID:	error = sim_fsck();				break; // TODO
-				case CMD_CORRUPT_ID:error = sim_corrupt();			break; // TODO
+				case CMD_FSCK_ID:	error = sim_fsck();				break;
+				case CMD_CORRUPT_ID:error = sim_corrupt();			break;
 				case CMD_DEBUG_ID:	error = sim_debug(arg1, arg2);	break;
 				default:
 					puts("-zos: command not found");
@@ -181,6 +181,7 @@ void run() {
 
 			if (error == RETURN_FAILURE && cmd_id != CMD_UNKNOWN_ID) {
 				my_perror(command);
+				log_error("simulator error: %s", my_strerror(my_errno));
 				reset_myerrno();
 			}
 		}

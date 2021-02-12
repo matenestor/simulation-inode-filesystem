@@ -24,7 +24,7 @@ int init_filesystem(const char* fsp, bool* is_formatted) {
 		// filesystem is ready to be loaded
 		if ((filesystem = fopen(fsp, "rb+")) != NULL) {
 			fs_read_superblock(&sb);				// cache super block
-			fs_read_inode(&in_actual, 1, ROOT_ID);	// cache root inode
+			fs_read_inode(&inode_actual, 1, ROOT_ID);	// cache root inode
 
 			*is_formatted = true;
 			puts("Filesystem loaded successfully.");

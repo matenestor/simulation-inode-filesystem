@@ -51,6 +51,7 @@ int add_to_parent(struct inode* inode_parent, struct carry_dir_item* carry);
 bool is_directory_empty(const struct inode* inode_source);
 bool item_exists(const struct inode* inode_parent, const char* dir_name);
 int update_size(struct inode* inode_target, const uint32_t file_size);
+int load_inode_ids(bool* inode_ids, const size_t ids_count, int* active);
 
 // FILESYSTEM INPUT/OUTPUT FUNCTIONS
 

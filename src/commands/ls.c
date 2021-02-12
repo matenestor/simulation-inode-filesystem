@@ -19,7 +19,7 @@ int sim_ls(const char* path) {
 
 	// no path given -- list actual directory
 	if (strlen(path) == 0) {
-		memcpy(&inode_ls, &in_actual, sizeof(struct inode));
+		memcpy(&inode_ls, &inode_actual, sizeof(struct inode));
 	}
 	// else get last inode in path
 	else {

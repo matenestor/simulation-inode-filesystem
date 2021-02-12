@@ -52,7 +52,6 @@ int sim_load(const char* path) {
 	FILE* fp = NULL;
 	char* line = NULL;
 	size_t len = 0;
-	ssize_t read = 0;
 	char command[BUFFER_INPUT_LENGTH] = {0};
 	char arg1[BUFFER_INPUT_LENGTH] = {0};
 	char arg2[BUFFER_INPUT_LENGTH] = {0};
@@ -90,7 +89,8 @@ int sim_load(const char* path) {
 	return RETURN_SUCCESS;
 
 fail:
-	fclose(fp);
+	if (fp)
+		fclose(fp);
 	if (line)
 		free(line);
 	log_warning("load: unable to perform operations from [%s]", path);

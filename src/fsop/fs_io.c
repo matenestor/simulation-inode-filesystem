@@ -14,7 +14,7 @@ extern FILE* filesystem;
 // --- SEEK
 
 static void fs_seek_set(const int64_t offset) {
-	assert((0 <= offset) && (offset < (sb.disk_size*1024*1024))); // TODO delete
+//	assert((0 <= offset) && (offset < (sb.disk_size*1024*1024))); // TODO delete
 	fseek(filesystem, offset, SEEK_SET);
 }
 

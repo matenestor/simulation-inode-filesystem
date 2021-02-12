@@ -30,7 +30,7 @@ int sim_rmdir(const char* path) {
 	if (split_path(path, dir_path, dir_name) == RETURN_FAILURE) {
 		goto fail;
 	}
-	if (strcmp(dir_name, ".") == 0) {
+	if (strcmp(dir_name, ".") == 0 || strcmp(dir_name, "..") == 0) {
 		set_myerrno(Err_dir_arg_invalid);
 		goto fail;
 	}

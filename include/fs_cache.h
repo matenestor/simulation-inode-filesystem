@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 extern struct superblock sb;
-extern struct inode in_actual;
+extern struct inode inode_actual;
 
 extern char fs_name[];
 extern char buff_pwd[];

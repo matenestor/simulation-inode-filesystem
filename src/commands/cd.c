@@ -13,7 +13,7 @@
 static int handle_prompt_change() {
 	// pwd change
 	char new_pwd[STRLEN_PWD_LENGTH] = {0};
-	get_path_to_root(new_pwd, STRLEN_PWD_LENGTH, &in_actual);
+	get_path_to_root(new_pwd, STRLEN_PWD_LENGTH, &inode_actual);
 	strncpy(buff_pwd, new_pwd, STRLEN_PWD_LENGTH);
 	// whole prompt change
 	snprintf(buff_prompt, BUFFER_PROMPT_LENGTH, FORMAT_PROMPT, fs_name, buff_pwd);
@@ -48,7 +48,7 @@ int sim_cd(const char* path) {
 	}
 
 	// change directory
-	memcpy(&in_actual, &inode_cd, sizeof(struct inode));
+	memcpy(&inode_actual, &inode_cd, sizeof(struct inode));
 	handle_prompt_change();
 
 	return RETURN_SUCCESS;

@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -49,8 +50,8 @@ int init_block_with_directories(const uint32_t id_block) {
 	struct directory_item block[sb.count_dir_items];
 
 	for (i = 0; i < sb.count_dir_items; i++) {
-	    block->id_inode = FREE_LINK;
-		strncpy(block->item_name, "", STRLEN_ITEM_NAME);
+	    block[i].id_inode = FREE_LINK;
+		strncpy(block[i].item_name, "", STRLEN_ITEM_NAME);
 	}
 
 	fs_write_directory_item(block, sb.count_dir_items, id_block);
@@ -187,7 +188,8 @@ ITERABLE(delete_block_item) {
 
 		for (j = 0; j < sb.count_dir_items; ++j) {
 			// record with id to delete found
-			if (block[j].id_inode == carry->id && strcmp(block[j].item_name, carry->name) == 0) {
+			if (block[j].id_inode == carry->id
+					&& strcmp(block[j].item_name, carry->name) == 0) {
 				block[j].id_inode = FREE_LINK;
 				strncpy(block[j].item_name, "", STRLEN_ITEM_NAME);
 				fs_write_directory_item(block, sb.count_dir_items, links[i]);
@@ -264,7 +266,9 @@ ITERABLE(list_items) {
 		fs_read_directory_item(block, sb.count_dir_items, links[i]);
 
 		for (j = 0; j < sb.count_dir_items; ++j) {
-			if (block[j].id_inode == FREE_LINK)
+			if (block[j].id_inode == FREE_LINK
+					|| strcmp(block[j].item_name, ".") == 0
+					|| strcmp(block[j].item_name, "..") == 0)
 				continue;
 
 			// read inodes in directory, so it is possible to print
@@ -373,7 +377,6 @@ ITERABLE(outcp_data) {
 		fs_read_data(block, sb.block_size, links[i]);
 		stream_outcp(block, to_write, carry->file);
 	}
-	// always return false, so all links are iterated
 	return ret;
 }
 
@@ -419,6 +422,68 @@ ITERABLE(copy_data) {
 		if (carry->links_count == 0)
 			ret = true;
 	}
-	// always return false, so all links are iterated
 	return ret;
+}
+
+/*
+ * Recursively iterate (DFS) over all directory inodes and filter ids from carry,
+ * which are found -- rest ids are lost inodes, that will be moved to lost+found/
+ */
+ITERABLE(filter_correct_ids) {
+	size_t i, j;
+	// since this function is visited recursively, allocate memory dynamically
+	struct directory_item* block =
+			malloc(sb.count_dir_items * sizeof(struct directory_item));
+	struct inode* inode_check = malloc(sizeof(struct inode));
+	struct carry_fsck* carry = (struct carry_fsck*) p_carry;
+
+	// both pointers must allocate memory
+	if (block == NULL || inode_check == NULL) {
+		goto fail;
+	}
+
+	for (i = 0; i < links_count; ++i) {
+		if (links[i] == FREE_LINK)
+			continue;
+
+		fs_read_directory_item(block, sb.count_dir_items, links[i]);
+
+		for (j = 0; j < sb.count_dir_items; ++j) {
+			// ignore dot and empty dirs
+			if (strcmp(block[j].item_name, "") == 0
+					|| strcmp(block[j].item_name, ".") == 0
+					|| strcmp(block[j].item_name, "..") == 0) {
+				continue;
+			}
+
+			// filter out inode which is not lost in filesystem
+			carry->inode_ids[block[j].id_inode - 1] = false;
+			carry->active--;
+
+			// load subdirectory in current inode
+			// and start iterating if it is directory
+			fs_read_inode(inode_check, 1, block[j].id_inode);
+			if (inode_check->inode_type != Inode_type_dirc) {
+				continue;
+			}
+
+			if (iterate_links(inode_check, carry, filter_correct_ids) == RETURN_SUCCESS) {
+				// if 'filter_correct_ids()' returned positive value,
+				// it means error during mallocation
+				goto fail;
+			}
+		}
+	}
+
+	free(inode_check);
+	free(block);
+	// always return false, so all links are iterated
+	return false;
+
+fail:
+	if (block)
+		free(block);
+	if (inode_check)
+		free(inode_check);
+	return true;
 }

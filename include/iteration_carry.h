@@ -29,6 +29,11 @@ struct carry_copy {
 	size_t links_count;
 };
 
+struct carry_fsck {
+	bool* inode_ids;
+	int active;
+};
+
 ITERABLE(search_block_inode_id);
 ITERABLE(search_block_inode_name);
 ITERABLE(add_block_item);
@@ -40,5 +45,6 @@ ITERABLE(incp_data);
 ITERABLE(outcp_data);
 ITERABLE(cat_data);
 ITERABLE(copy_data);
+ITERABLE(filter_correct_ids);
 
 #endif

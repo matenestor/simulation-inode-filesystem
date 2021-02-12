@@ -48,6 +48,6 @@ char buff_prompt[BUFFER_PROMPT_LENGTH];	// prompt in console
 // super block of actual using filesystem
 struct superblock sb = {0};
 // inode, where user currently is
-struct inode in_actual = {0};
+struct inode inode_actual = {0};
 
 #endif

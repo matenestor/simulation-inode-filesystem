@@ -15,7 +15,7 @@
 #define CHANCE	20		// % chance to get item deleted
 
 
-ITERABLE(corrupt_items) {
+static ITERABLE(corrupt_items) {
 	size_t i, j;
 	struct directory_item block[sb.count_dir_items];
 
@@ -33,7 +33,7 @@ ITERABLE(corrupt_items) {
 				continue;
 
 			if (rand() % (100 / CHANCE) == 0) {
-				printf("deleting: [id: %d] [name: %s]\n", block[j].id_inode, block[j].item_name);
+				printf("corrupt: [id: %d] [name: %s]\n", block[j].id_inode, block[j].item_name);
 				block[j].id_inode = FREE_LINK;
 				strncpy(block[j].item_name, "", STRLEN_ITEM_NAME);
 				fs_write_directory_item(block, sb.count_dir_items, links[i]);
@@ -48,7 +48,7 @@ ITERABLE(corrupt_items) {
  * Iterates over all directory inodes in filesystem
  * and randomly deletes item records in blocks.
  */
-int corrupt_inodes() {
+static int corrupt_inodes() {
 	size_t i;
 	// with bigger filesystem size (>4 GB) and bigger inodes,
 	// this should be rewritten to iteration with caching the inodes
@@ -66,6 +66,11 @@ int corrupt_inodes() {
 		}
 
 		free(inode_corrupt);
+		return RETURN_SUCCESS;
+	}
+	else {
+		set_myerrno(Err_malloc);
+		return RETURN_FAILURE;
 	}
 }
 
@@ -75,7 +80,5 @@ int sim_corrupt() {
 
 	srand(time(NULL));
 
-	corrupt_inodes();
-
-	return RETURN_SUCCESS;
+	return corrupt_inodes();
 }

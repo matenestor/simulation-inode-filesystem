@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
@@ -15,7 +16,7 @@
  * Get id of parent of given inode, which must be directory.
  */
 static int32_t get_parent_inode_id(struct inode* inode_child) {
-	assert(inode_child->inode_type == Inode_type_dirc);
+//	assert(inode_child->inode_type == Inode_type_dirc); // TODO delete
 
 	struct directory_item dot_dirs[2] = {0};
 	fs_read_directory_item(dot_dirs, 2, inode_child->direct[0]);
@@ -46,7 +47,7 @@ static int get_inode_ids(uint32_t* p_id_destination, uint32_t* p_id_parent, cons
 		fs_read_inode(&inode_dest, 1, ROOT_ID);
 	} else {
 		// track path from actual directory
-		fs_read_inode(&inode_dest, 1, in_actual.id_inode);
+		fs_read_inode(&inode_dest, 1, inode_actual.id_inode);
 	}
 	// init very first ids of inodes in path
 	id_dest = inode_dest.id_inode;
@@ -205,7 +206,7 @@ int add_to_parent(struct inode* inode_parent, struct carry_dir_item* carry) {
 		// parent inode has all, so far created, blocks full
 		if (create_empty_links(empty_block, 1, inode_parent) != RETURN_FAILURE) {
 			init_block_with_directories(empty_block[0]);
-			add_block_item(empty_block, 1, &carry);
+			add_block_item(empty_block, 1, carry);
 		} else {
 			// error while creating new link, or parent inode is completely full of directories
 			return RETURN_FAILURE;
@@ -246,5 +247,45 @@ bool item_exists(const struct inode* inode_parent, const char* dir_name) {
 int update_size(struct inode* inode_target, const uint32_t file_size) {
 	inode_target->file_size = file_size;
 	fs_write_inode(inode_target, 1, inode_target->id_inode);
+
+	// update 'inode_actual', if it was the one, which size was updated
+	if (inode_target->id_inode == inode_actual.id_inode) {
+		fs_read_inode(&inode_actual, 1, inode_target->id_inode);
+	}
 	return RETURN_SUCCESS;
+}
+
+/*
+ * Load ids of all inodes in filesystem.
+ */
+int load_inode_ids(bool* inode_ids, const size_t ids_count, int* active) {
+	size_t i;
+	// with bigger filesystem size (>4 GB) and bigger inodes,
+	// this should be rewritten to iteration with caching the inodes
+	struct inode* inodes = malloc(ids_count * sizeof(struct inode));
+
+	if (inodes) {
+		// read all inodes in filesystem
+		fs_read_inode(inodes, ids_count, 1);
+
+		for (i = 0; i < ids_count; ++i) {
+			if (inodes[i].inode_type == Inode_type_free)
+				continue;
+
+			// set inode id as active -- its index + 1 is the id number
+			inode_ids[i] = true;
+			(*active)++;
+		}
+
+		// root inode should never get lost
+		inode_ids[0] = false;
+		(*active)--;
+
+		free(inodes);
+		return RETURN_SUCCESS;
+	}
+	else {
+		set_myerrno(Err_malloc);
+		return RETURN_FAILURE;
+	}
 }
