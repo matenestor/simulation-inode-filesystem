@@ -21,14 +21,33 @@ static void generete_name(char* dest) {
 	}
 }
 
-static int save_lost_inodes(struct inode* inode_lost_found, bool* inode_ids,
-							const size_t ids_count, struct carry_fsck* carry_fsck) {
+static int save_lost_inodes(struct inode* inode_lost_found, struct carry_fsck* carry_fsck) {
 	size_t i;
 	struct carry_dir_item carry_dir = {0};
+	struct inode inode_check = {0};
 	srand(time(NULL));
 
-	for (i = 0; i < ids_count; ++i) {
-		if (inode_ids[i]) {
+	// FIRST check possibly lost inodes -- some might be just hidden subdirectories
+	//  The root iteration discovered only paths to lost inodes, so everything under
+	//  might be considered also as lost, although the records just weren't met
+	//  by the recursion. Only root inode was used as source of iteration --
+	//  -- here are used all inodes left in 'carry_fsck->inode_ids'
+	for (i = 0; i < sb.block_count; ++i) {
+		if (carry_fsck->inode_ids[i]) {
+			fs_read_inode(&inode_check, 1, i + 1);
+
+			if (iterate_links(&inode_check, carry_fsck, filter_correct_ids) == RETURN_SUCCESS) {
+				// if 'filter_correct_ids()' returned positive value,
+				// it means error during mallocation
+				return RETURN_FAILURE;
+			}
+
+		}
+	}
+
+	// SECOND here are truly lost inodes
+	for (i = 0; i < sb.block_count; ++i) {
+		if (carry_fsck->inode_ids[i]) {
 			carry_dir.id = i + 1;
 			generete_name(carry_dir.name);
 
@@ -36,9 +55,6 @@ static int save_lost_inodes(struct inode* inode_lost_found, bool* inode_ids,
 			if (add_to_parent(inode_lost_found, &carry_dir) == RETURN_FAILURE) {
 				return RETURN_FAILURE;
 			}
-
-			inode_ids[i] = false;
-			carry_fsck->active--;
 		}
 	}
 
@@ -52,7 +68,6 @@ int sim_fsck() {
 	log_info("fsck");
 
 	int active = 0;
-	int total_lost = 0;
 	struct inode inode_root = {0};
 	struct inode inode_lost_found = {0};
 	struct carry_fsck carry_fsck = {0};
@@ -81,8 +96,6 @@ int sim_fsck() {
 
 	// some inodes are still active == some inodes are lost
 	if (carry_fsck.active > 0) {
-		total_lost = carry_fsck.active;
-
 		// load or create lost+found inode
 		if (get_inode(&inode_lost_found, LOST_FOUND) != RETURN_FAILURE) {
 			// got lost+found inode, good
@@ -99,10 +112,9 @@ int sim_fsck() {
 		}
 
 		// save lost inodes to lost+found directory
-		if (save_lost_inodes(
-				&inode_lost_found, inode_ids, sb.block_count, &carry_fsck) != RETURN_FAILURE) {
+		if (save_lost_inodes(&inode_lost_found, &carry_fsck) != RETURN_FAILURE) {
 			printf("Filesystem status is REPAIRED. "
-				   "Amount of saved inodes = %d.\n", total_lost);
+				   "Amount of saved inodes = %d.\n", carry_fsck.active);
 		} else {
 			printf("Filesystem status is CORRUPTED. Only some lost inodes saved. "
 				   "Amount of lost inodes = %d.\n", carry_fsck.active);
