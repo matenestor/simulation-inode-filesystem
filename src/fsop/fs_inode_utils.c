@@ -134,7 +134,7 @@ static int handle_child_name(char** p_buffer, int* size_remaining, const uint32_
 	// path to root is too long
 	else {
 		*p_buffer -= 2;
-		strncpy(*p_buffer, "..", 3);
+		strncpy(*p_buffer, "..", 2); // really copy just 2
 		return RETURN_FAILURE;
 	}
 }
@@ -152,10 +152,7 @@ int get_path_to_root(char* dest_path, const size_t length_path, const struct ino
 	char child_name[STRLEN_ITEM_NAME] = {0};	// buffer for names of directories on path to root
 	size_t length_child_name = 0;
 	char buffer[length_path];					// buffer for whole path to root
-	char* p_buffer = buffer + length_path - 2;	// pointer to end of buffer
-
-	// in case 'inode_source' is root already, write root to path
-	*p_buffer = SEPARATOR[0];
+	char* p_buffer = buffer + length_path - 2;	// pointer to end of buffer, including \0
 
 	memcpy(&inode_tmp, inode_source, sizeof(struct inode));
 	memset(buffer, '\0', length_path);
@@ -183,6 +180,12 @@ int get_path_to_root(char* dest_path, const size_t length_path, const struct ino
 						  child_name, length_child_name) == RETURN_FAILURE) {
 			break; // buffer size limit reached
 		}
+	}
+
+	// in case 'inode_source' is root already,
+	// the while loop didn't run -- write root to path
+	if (*p_buffer == '\0') {
+		*p_buffer = SEPARATOR[0];
 	}
 
 	// copy path to root to given buffer
